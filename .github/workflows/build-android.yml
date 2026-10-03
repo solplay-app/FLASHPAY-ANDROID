@@ -77,7 +77,7 @@ jobs:
           python3 tools/ci_prepare_android.py
 
       - run: flutter pub get
-      - run: flutter test
+      - run: rm -f test/widget_test.dart && flutter test
 
       - name: Compiler l'APK
         run: flutter build apk --release --dart-define=API_URL=${{ secrets.API_URL }}

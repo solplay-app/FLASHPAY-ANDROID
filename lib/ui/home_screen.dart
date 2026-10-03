@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
 import 'package:intl/intl.dart';
 import '../core/models.dart';
 import '../core/notifications.dart';

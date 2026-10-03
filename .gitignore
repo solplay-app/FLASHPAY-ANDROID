@@ -1,0 +1,10 @@
+.dart_tool/
+build/
+.flutter-plugins*
+.packages
+pubspec.lock
+# Générés par la CI (flutter create) : à ne pas versionner
+android/
+ios/
+*.iml
+.idea/

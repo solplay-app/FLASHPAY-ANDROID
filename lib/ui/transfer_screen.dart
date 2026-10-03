@@ -90,7 +90,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
 
   Future<void> _quote() async {
     final net = int.tryParse(_amount.text);
-    if (net == null || net < 500) return toast(context, 'Montant minimum : 500 F');
+    if (net == null || net < 300) return toast(context, 'Montant minimum : 300 F');
     setState(() => _busy = true);
     try {
       final q = await ref.read(repoProvider).quote(net);
@@ -129,8 +129,8 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
         ),
       );
 
-  Widget _step(String title, String? subtitle, List<Widget> children) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+  Widget _step(String title, String? subtitle, List<Widget> children) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
           if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(subtitle, style: TextStyle(color: Colors.grey.shade700))),
@@ -157,8 +157,8 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
           controller: _pages,
           physics: const NeverScrollableScrollPhysics(), // on avance uniquement via les choix / boutons
           children: [
-            _step('Depuis quel réseau ?', 'Le compte qui sera débité.', [OperatorPicker(value: _from, onChanged: (o) => _pickSender(o))]),
-            _step('Numéro du destinataire', 'Le réseau est détecté automatiquement.', [
+            _step('Depuis quel réseau ?', null, [OperatorPicker(value: _from, onChanged: (o) => _pickSender(o))]),
+            _step('Numéro du destinataire', null, [
               TextField(
                 controller: _phone,
                 onChanged: _onPhoneChanged,
@@ -173,22 +173,16 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
               const SizedBox(height: 16),
               OperatorPicker(
                 value: _to,
-                startOpen: false,
-                hint: _prefix.length < 2 ? 'Réseau du destinataire' : 'Réseau non reconnu · choisir',
                 onOpen: () => FocusScope.of(context).unfocus(),
                 onChanged: (o) => setState(() {
                   _to = o;
                   _toManual = true;
                 }),
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text('01 → Moov · 05 → MTN · 07 → Orange. Pour un compte Wave, choisissez Wave dans la liste.', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-              ),
               const SizedBox(height: 16),
               FilledButton(onPressed: _phoneNext, child: const Text('Continuer')),
             ]),
-            _step('Quel montant ?', 'Ce que le destinataire reçoit.', [
+            _step('Quel montant ?', null, [
               TextField(
                 controller: _amount,
                 keyboardType: TextInputType.number,

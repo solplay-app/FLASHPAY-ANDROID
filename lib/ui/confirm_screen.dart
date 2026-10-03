@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
@@ -21,6 +22,7 @@ class ConfirmScreen extends ConsumerStatefulWidget {
 class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   // Une seule clé par ticket : si la requête est rejouée (réseau coupé, double clic), le backend ne débite qu'une fois.
   final _key = const Uuid().v4();
+  final _payer = TextEditingController();
   Transfer? _tx;
   bool _busy = false;
   Timer? _poll;
@@ -28,6 +30,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   @override
   void dispose() {
     _poll?.cancel();
+    _payer.dispose();
     super.dispose();
   }
 
@@ -37,11 +40,20 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     if (!await launchUrl(uri, mode: LaunchMode.inAppBrowserView) && mounted) toast(context, 'Impossible d’ouvrir la page de paiement');
   }
 
+  /// « 07 00 00 00 00 », « +225 07… » → +225 + 10 chiffres (préfixe 01, 05 ou 07), sinon null.
+  String? get _payerPhone {
+    var d = _payer.text.replaceAll(RegExp(r'\D'), '');
+    if (d.startsWith('225') && d.length == 13) d = d.substring(3);
+    return RegExp(r'^(01|05|07)\d{8}$').hasMatch(d) ? '+225$d' : null;
+  }
+
   Future<void> _pay() async {
+    final payer = _payerPhone;
+    if (payer == null) return toast(context, 'Numéro à débiter invalide (10 chiffres, commençant par 01, 05 ou 07)');
     setState(() => _busy = true);
     try {
       final tx = await ref.read(repoProvider).create(
-            net: widget.quote.net, sender: widget.from, receiver: widget.to, phone: widget.phone, idempotencyKey: _key, cagnotteCode: widget.cagnotteCode);
+            net: widget.quote.net, sender: widget.from, receiver: widget.to, phone: widget.phone, payerPhone: payer, idempotencyKey: _key, cagnotteCode: widget.cagnotteCode);
       if (!mounted) return;
       setState(() => _tx = tx);
       if (tx.redirectUrl != null) await _open(tx.redirectUrl!);
@@ -84,6 +96,14 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
             ]),
           ),
         ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _payer,
+          enabled: tx == null,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9 +]')), LengthLimitingTextInputFormatter(18)],
+          decoration: const InputDecoration(labelText: 'Numéro à débiter', prefixText: '+225  '),
+        ),
         const SizedBox(height: 20),
         if (tx == null)
           FilledButton(
@@ -91,7 +111,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
             child: _busy ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Confirmer et Payer'),
           )
         else
-          _Status(tx: tx, onReopen: tx.redirectUrl == null ? null : () => _open(tx.redirectUrl!), onClose: () => Navigator.popUntil(context, (r) => r.isFirst)),
+          _Status(tx: tx, ussd: widget.from == Op.mtn || widget.from == Op.moov, onReopen: tx.redirectUrl == null ? null : () => _open(tx.redirectUrl!), onClose: () => Navigator.popUntil(context, (r) => r.isFirst)),
       ]),
     );
   }
@@ -106,8 +126,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
 }
 
 class _Status extends StatelessWidget {
-  const _Status({required this.tx, required this.onClose, this.onReopen});
+  const _Status({required this.tx, required this.onClose, this.onReopen, this.ussd = false});
   final Transfer tx;
+  final bool ussd; // MTN / Moov : confirmation par code sur le téléphone, pas de page
   final VoidCallback onClose;
   final VoidCallback? onReopen;
   @override
@@ -116,7 +137,9 @@ class _Status extends StatelessWidget {
       'SUCCES' => 'Transfert réussi. Le destinataire a été crédité.',
       'ECHEC' => 'Le paiement n’a pas abouti. Rien n’a été débité.',
       'REMBOURSE' => 'Le transfert a échoué, vous avez été remboursé.',
-      _ => 'Validez le paiement dans la page ouverte (ou sur votre téléphone). Nous suivons le statut automatiquement.',
+      _ => ussd
+          ? 'Validez la demande de code reçue sur votre téléphone. Nous suivons le statut automatiquement.'
+          : 'Validez le paiement dans la page ouverte (ou sur votre téléphone). Nous suivons le statut automatiquement.',
     };
     return Column(children: [
       Icon(tx.done ? (tx.etat == 'SUCCES' ? Icons.check_circle : Icons.cancel) : Icons.hourglass_top, size: 64, color: tx.color),

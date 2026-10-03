@@ -64,17 +64,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FlashPay', style: TextStyle(fontWeight: FontWeight.w800, color: brand)),
+        title: const FlashPayLogo(),
         actions: [
           IconButton(
             tooltip: 'Notifications',
             icon: Icon(_notif ? Icons.notifications_active : Icons.notifications_off_outlined),
             onPressed: _toggleNotifications,
-          ),
-          IconButton(
-            tooltip: 'Support',
-            icon: const Icon(Icons.support_agent),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen())),
           ),
           IconButton(
             tooltip: 'Vérification d’identité',
@@ -84,9 +79,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           IconButton(tooltip: 'Déconnexion', icon: const Icon(Icons.logout), onPressed: () => ref.read(authProvider.notifier).logout()),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Support',
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen())),
+        child: const Icon(Icons.support_agent),
+      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(transfersProvider.future),
-        child: ListView(padding: const EdgeInsets.all(16), children: [
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), children: [
           FilledButton.icon(
             icon: const Icon(Icons.send),
             label: const Text('Transférer des fonds'),
@@ -96,8 +96,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
           const SizedBox(height: 10),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          FilledButton.tonalIcon(
             icon: const Icon(Icons.groups_outlined),
             label: const Text('Cagnottes'),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CagnotteListScreen())).then((_) => ref.invalidate(transfersProvider)),

@@ -2,68 +2,60 @@ import 'package:flutter/material.dart';
 import '../core/models.dart';
 import 'theme.dart';
 
-/// Tuile dépliable : replie sur l'opérateur choisi, se déplie pour montrer les 4 réseaux avec leur logo.
-class OperatorPicker extends StatefulWidget {
-  const OperatorPicker({super.key, required this.value, required this.onChanged, this.startOpen = true, this.onOpen, this.hint = 'Choisir un opérateur'});
+/// Les 4 réseaux en tuiles arrondies (2 x 2) avec leur logo.
+class OperatorPicker extends StatelessWidget {
+  const OperatorPicker({super.key, required this.value, required this.onChanged, this.onOpen});
   final Op? value;
   final ValueChanged<Op> onChanged;
-  final bool startOpen; // déplié dès l'ouverture quand rien n'est choisi
-  final VoidCallback? onOpen; // ex. fermer le clavier pour laisser la place à la liste
-  final String hint;
+  final VoidCallback? onOpen; // ex. fermer le clavier avant le choix
+
   @override
-  State<OperatorPicker> createState() => _OperatorPickerState();
+  Widget build(BuildContext context) => GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.3,
+        children: [
+          for (final o in Op.values)
+            _Tile(
+              op: o,
+              selected: o == value,
+              onTap: () {
+                onOpen?.call();
+                onChanged(o);
+              },
+            ),
+        ],
+      );
 }
 
-class _OperatorPickerState extends State<OperatorPicker> {
-  late bool _open = widget.value == null && widget.startOpen;
-
+class _Tile extends StatelessWidget {
+  const _Tile({required this.op, required this.selected, required this.onTap});
+  final Op op;
+  final bool selected;
+  final VoidCallback onTap;
   @override
-  void didUpdateWidget(OperatorPicker old) {
-    super.didUpdateWidget(old);
-    // Réseau détecté (ou effacé) depuis l'extérieur : on replie sur le choix.
-    if (old.value != widget.value && widget.value != null) _open = false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final v = widget.value;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade300)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          leading: v == null ? const CircleAvatar(child: Icon(Icons.account_balance_wallet_outlined)) : OpLogo(v, size: 44),
-          title: Text(v?.label ?? widget.hint, style: const TextStyle(fontWeight: FontWeight.w700)),
-          trailing: AnimatedRotation(turns: _open ? .5 : 0, duration: const Duration(milliseconds: 200), child: const Icon(Icons.keyboard_arrow_down)),
-          onTap: () {
-            if (!_open) widget.onOpen?.call();
-            setState(() => _open = !_open);
-          },
+  Widget build(BuildContext context) => AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          color: selected ? op.color.withOpacity(.10) : Colors.white,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: selected ? op.color : const Color(0xFFE3DDF0), width: selected ? 2.5 : 1),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(selected ? .08 : .04), blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          child: _open
-              ? Column(children: [
-                  const Divider(height: 1),
-                  for (final o in Op.values)
-                    ListTile(
-                      selected: o == v,
-                      selectedTileColor: o.color.withOpacity(.12),
-                      leading: OpLogo(o, size: 40),
-                      title: Text(o.label),
-                      trailing: o == v ? Icon(Icons.check_circle, color: o.color) : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
-                      onTap: () {
-                        setState(() => _open = false);
-                        widget.onChanged(o);
-                      },
-                    ),
-                ])
-              : const SizedBox(width: double.infinity),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(26),
+            onTap: onTap,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              OpLogo(op, size: 52),
+              const SizedBox(height: 10),
+              Text(op.label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            ]),
+          ),
         ),
-      ]),
-    );
-  }
+      );
 }

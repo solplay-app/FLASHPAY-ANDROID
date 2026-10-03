@@ -49,7 +49,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         body: SafeArea(
           child: ListView(padding: const EdgeInsets.all(24), children: [
             const SizedBox(height: 48),
-            const Text('FlashPay', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: brand)),
+            const Align(alignment: Alignment.centerLeft, child: FlashPayLogo(size: 56)),
             const SizedBox(height: 8),
             const Text('Envoyez de l’argent entre Wave, Orange, MTN et Moov.'),
             const SizedBox(height: 40),

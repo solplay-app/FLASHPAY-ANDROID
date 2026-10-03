@@ -29,6 +29,7 @@ class Repo {
     required Op sender,
     required Op receiver,
     required String phone,
+    required String payerPhone,
     required String idempotencyKey,
     String? cagnotteCode,
   }) =>
@@ -38,6 +39,7 @@ class Repo {
           'senderOperator': sender.api,
           'receiverOperator': receiver.api,
           'receiverPhone': phone,
+          'payerPhone': payerPhone,
           'idempotencyKey': idempotencyKey,
           if (cagnotteCode != null) 'cagnotteCode': cagnotteCode,
         });

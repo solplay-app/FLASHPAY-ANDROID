@@ -178,10 +178,7 @@ class _CreateState extends ConsumerState<CreateCagnotteScreen> {
             decoration: const InputDecoration(labelText: 'Numéro qui reçoit l’argent', prefixText: '+225  '),
           ),
           const SizedBox(height: 12),
-          OperatorPicker(value: _op, startOpen: false, hint: 'Réseau de réception', onChanged: (o) => setState(() => _op = o)),
-          const SizedBox(height: 8),
-          Text('L’argent de chaque participation arrive directement sur ce numéro. Les participants paient les frais de service de 6 %.',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+          OperatorPicker(value: _op, onChanged: (o) => setState(() => _op = o)),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _busy ? null : _submit,
@@ -214,7 +211,7 @@ class _DetailState extends ConsumerState<CagnotteDetailScreen> {
   Future<void> _participate() async {
     final net = int.tryParse(_amount.text);
     if (_from == null) return toast(context, 'Choisissez le réseau qui paie');
-    if (net == null || net < 500) return toast(context, 'Montant minimum : 500 F');
+    if (net == null || net < 300) return toast(context, 'Montant minimum : 300 F');
     setState(() => _busy = true);
     try {
       final q = await ref.read(repoProvider).quote(net);
@@ -284,7 +281,7 @@ class _DetailState extends ConsumerState<CagnotteDetailScreen> {
             const SizedBox(height: 16),
             const Text('Participer', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 8),
-            OperatorPicker(value: _from, startOpen: false, hint: 'Réseau qui paie', onChanged: (o) => setState(() => _from = o)),
+            OperatorPicker(value: _from, onChanged: (o) => setState(() => _from = o)),
             const SizedBox(height: 12),
             TextField(
               controller: _amount,

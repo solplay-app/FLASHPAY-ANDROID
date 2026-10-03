@@ -1,0 +1,4 @@
+Déposez ici les logos officiels (PNG carré, fond transparent, 256x256 conseillé) :
+  wave.png  orange.png  mtn.png  moov.png
+Tant qu'un fichier manque, l'app affiche une pastille colorée avec l'initiale de l'opérateur.
+Les logos sont des marques déposées : utilisez les kits presse / marque fournis par chaque opérateur.

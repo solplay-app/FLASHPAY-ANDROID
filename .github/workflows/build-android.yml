@@ -1,37 +1,24 @@
 # ============================================================================
-# FLASHPAY APP (Flutter) : COMPILER L'APK SUR GITHUB
+# FLASHPAY APP (Flutter) : COMPILER ET PUBLIER UNE NOUVELLE VERSION
 # ============================================================================
-# AVANT LE PREMIER LANCEMENT (une seule fois)
-#   1. Dépôt GitHub > Settings > Secrets and variables > Actions > "New repository secret"
-#      - API_URL              (obligatoire) adresse de l'API Render, SANS slash final
-#                             ex. https://flashpay-backend.onrender.com
-#      - GOOGLE_SERVICES_JSON (pour le KYC) tout le contenu du fichier google-services.json
-#                             (Firebase > Paramètres du projet > Vos applications > Android).
-#                             L'identifiant Android de l'app Firebase doit être :
-#                             ci.flashpay.flashpay_app
-#                             Sans ce secret, l'APK est compilé SANS Firebase : le KYC ne marchera pas.
+# SECRETS À CRÉER (une seule fois) : Dépôt GitHub > Settings > Secrets and variables > Actions
+#   - API_URL              (obligatoire) adresse de l'API Render, SANS slash final
+#   - GOOGLE_SERVICES_JSON (KYC) tout le contenu du fichier google-services.json
+#   - KEYSTORE_PASSWORD    (obligatoire) mot de passe de la clé de signature (voir « Créer la clé de signature »)
 #
-# LANCER UNE COMPILATION
-#   - Automatique à chaque push sur la branche "main".
-#   - À la main : onglet Actions > "Build Android" > bouton "Run workflow".
+# PUBLIER UNE VERSION
+#   - Automatique à chaque envoi de fichiers sur la branche "main".
+#   - À la main : onglet Actions > "Build Android" > Run workflow.
+#   - Facultatif : écrire le texte de la mise à jour dans un fichier notes.txt à la racine du dépôt.
 #
-# RÉCUPÉRER L'APK
-#   Onglet Actions > cliquer sur l'exécution (coche verte) > en bas, section "Artifacts"
-#   > "flashpay-apk" (zip contenant app-release.apk) > l'installer sur le téléphone Android.
+# LIEN DE TÉLÉCHARGEMENT UNIQUE (toujours la dernière version) :
+#   https://github.com/solplay-app/FLASHPAY-ANDROID/releases/latest/download/flashpay.apk
+#   (le dépôt doit être PUBLIC pour que ce lien marche pour tout le monde)
 #
-# SI ÇA ÉCHOUE (croix rouge)
-#   Ouvrir l'exécution > cliquer sur l'étape en rouge > copier les dernières lignes d'erreur.
-#   - Échec à "Permissions et Gradle"  : le modèle Android de Flutter a changé, voir tools/ci_prepare_android.py
-#   - Échec à "flutter test"           : un test unitaire ne passe plus
-#   - API_URL vide                     : le secret n'est pas créé ou mal orthographié
+# MISE À JOUR DANS L'APPLICATION : Compte > Mise à jour, et proposition automatique à l'ouverture.
+# La nouvelle version s'installe par-dessus l'ancienne : les données sont conservées.
 #
-# LIMITES
-#   - L'APK est signé avec la clé de debug : OK pour tester et installer, pas pour le Play Store
-#     (il faudra une clé de signature).
-#   - iOS n'est pas compilé ici (compte Apple Developer nécessaire).
-#   - android/ et ios/ ne sont PAS dans le dépôt : ils sont régénérés à chaque compilation.
-#     Le code de l'app est dans lib/.
-#   - L'icône vient du dossier android_res/ (à la racine du dépôt), copié après la génération.
+# SI ÇA ÉCHOUE (croix rouge) : ouvrir l'exécution > cliquer sur l'étape en rouge > copier les dernières lignes d'erreur.
 # ============================================================================
 
 name: Build Android
@@ -40,6 +27,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   apk:
@@ -78,18 +68,66 @@ jobs:
             echo "Pas de GOOGLE_SERVICES_JSON : l'app sera compilée sans Firebase (le KYC ne fonctionnera pas)."
           fi
 
+      - name: Paquets des mises à jour
+        run: |
+          grep -q '^  ota_update:' pubspec.yaml || flutter pub add ota_update
+          grep -q '^  url_launcher:' pubspec.yaml || flutter pub add url_launcher
+
       - name: Permissions et Gradle
         run: |
           python3 tools/apply_platform_config.py
           python3 tools/ci_prepare_android.py
 
+      - name: Permission d'installer les mises à jour
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q REQUEST_INSTALL_PACKAGES "$M" || sed -i 's#<application#<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n    <application#' "$M"
+
+      - name: Clé de signature
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ ! -f tools/release.keystore.enc ]; then
+            echo "Clé de signature absente : lancer d'abord le workflow « Créer la clé de signature »."
+            exit 1
+          fi
+          if [ -z "$KS_PASS" ]; then
+            echo "Le secret KEYSTORE_PASSWORD est manquant."
+            exit 1
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in tools/release.keystore.enc -out android/app/release.keystore -pass env:KS_PASS
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=flashpay\nstoreFile=release.keystore\n' "$KS_PASS" "$KS_PASS" > android/key.properties
+          python3 tools/ci_signing.py
+
       - run: flutter pub get
       - run: rm -f test/widget_test.dart && flutter test
 
       - name: Compiler l'APK
-        run: flutter build apk --release --dart-define=API_URL=${{ secrets.API_URL }}
+        run: |
+          flutter build apk --release \
+            --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }} \
+            --dart-define=API_URL=${{ secrets.API_URL }} \
+            --dart-define=BUILD_NUMBER=${{ github.run_number }} --dart-define=BUILD_NAME=1.0.${{ github.run_number }}
 
-      - uses: actions/upload-artifact@v4
+      - name: Préparer la publication
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk flashpay.apk
+          if [ -f notes.txt ]; then cp notes.txt notes_release.txt; else echo "Améliorations et corrections." > notes_release.txt; fi
+          python3 - <<'PY'
+          import json, os
+          n = os.environ['GITHUB_RUN_NUMBER']
+          notes = open('notes_release.txt', encoding='utf-8').read().strip()[:300]
+          json.dump({'versionCode': int(n), 'versionName': '1.0.' + n, 'notes': notes}, open('version.json', 'w', encoding='utf-8'), ensure_ascii=False)
+          PY
+
+      - name: Publier la version
+        uses: softprops/action-gh-release@v2
         with:
-          name: flashpay-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          tag_name: v1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: FlashPay 1.0.${{ github.run_number }}
+          body_path: notes_release.txt
+          make_latest: true
+          files: |
+            flashpay.apk
+            version.json

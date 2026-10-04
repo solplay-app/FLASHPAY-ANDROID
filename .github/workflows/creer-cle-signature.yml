@@ -1,0 +1,70 @@
+# ============================================================================
+# CRÉER LA CLÉ DE SIGNATURE FLASHPAY : À LANCER UNE SEULE FOIS
+# ----------------------------------------------------------------------------
+# Pourquoi : pour qu'une nouvelle version s'installe PAR-DESSUS l'ancienne (sans désinstaller,
+# sans perdre les données), toutes les versions doivent être signées avec la même clé.
+#
+# Avant de lancer :
+#   Dépôt GitHub > Settings > Secrets and variables > Actions > New repository secret
+#   Nom : KEYSTORE_PASSWORD
+#   Valeur : un mot de passe long (20 caractères minimum), lettres et chiffres seulement, SANS espace
+#            ni symbole. NOTE-LE EN LIEU SÛR : sans lui, la clé est inutilisable.
+#
+# Lancer : onglet Actions > "Créer la clé de signature" > Run workflow.
+# Résultat : le fichier tools/release.keystore.enc apparaît dans le dépôt (clé chiffrée avec ton mot de passe).
+# NE PAS LE SUPPRIMER et NE PAS RELANCER ce workflow : une nouvelle clé obligerait tout le monde à désinstaller l'app.
+# ============================================================================
+name: Créer la clé de signature
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifications
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -f tools/release.keystore.enc ]; then
+            echo "La clé existe déjà : ne la recréez pas (les mises à jour ne s'installeraient plus)."
+            exit 1
+          fi
+          if [ -z "$KS_PASS" ]; then
+            echo "Le secret KEYSTORE_PASSWORD n'existe pas : le créer d'abord (voir en haut du fichier)."
+            exit 1
+          fi
+          if [ ${#KS_PASS} -lt 16 ]; then
+            echo "Mot de passe trop court : 20 caractères minimum."
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Générer et chiffrer la clé
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          keytool -genkeypair -storetype PKCS12 -keystore release.keystore -alias flashpay \
+            -keyalg RSA -keysize 2048 -validity 36500 \
+            -storepass "$KS_PASS" -keypass "$KS_PASS" \
+            -dname "CN=FlashPay, O=FlashPay, C=CI"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in release.keystore -out tools/release.keystore.enc -pass env:KS_PASS
+          rm -f release.keystore
+
+      - name: Enregistrer la clé chiffrée dans le dépôt
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add tools/release.keystore.enc
+          git commit -m "Clé de signature chiffrée"
+          git push

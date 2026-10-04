@@ -1,5 +1,5 @@
-Après avoir envoyé les 5 fichiers de ce zip (dossier lib/ à la racine du dépôt FLASHPAY-ANDROID),
-SUPPRIMER ces 5 doublons mal placés dans lib/ :
+Après avoir envoyé le contenu de ce dossier dans le dépôt FLASHPAY-ANDROID (même arborescence),
+SUPPRIMER ces 5 anciens doublons mal placés directement dans lib/ (Flutter les ignore) :
   lib/push.dart
   lib/home_screen.dart
   lib/providers.dart

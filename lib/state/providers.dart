@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api.dart';
 import '../core/models.dart';
+import '../core/pin_service.dart';
 import '../core/push.dart';
 import '../data/repository.dart';
 
@@ -10,12 +11,14 @@ class AuthNotifier extends AsyncNotifier<String?> {
   Future<String?> build() async => (await readToken()) == null ? null : 'CONNECTE';
 
   Future<void> login(String token) async {
+    await PinService.clearBiometric(); // pas de PIN mémorisé d'un autre compte
     await saveToken(token);
     state = const AsyncData('CONNECTE');
   }
 
   Future<void> logout() async {
     await Push.stop(); // le téléphone ne reçoit plus les notifications de ce compte
+    await PinService.clearBiometric();
     await clearToken();
     state = const AsyncData(null);
   }

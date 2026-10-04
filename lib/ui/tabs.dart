@@ -11,6 +11,7 @@ import 'cagnotte_screen.dart';
 import 'design.dart';
 import 'kyc_screen.dart';
 import 'notice_screen.dart';
+import 'pin_screens.dart';
 import 'support_screen.dart';
 import 'theme.dart';
 
@@ -340,6 +341,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
             ),
             const SizedBox(height: 18),
             _item(Icons.verified_user_outlined, 'Vérification d’identité', subtitle: 'Nécessaire pour les montants élevés', onTap: () => _push(context, const KycScreen())),
+            _item(Icons.lock_outline, 'Sécurité', subtitle: 'Code PIN et empreinte digitale', onTap: () => _push(context, const SecurityScreen())),
             _item(
               Icons.mail_outline,
               'Messages',

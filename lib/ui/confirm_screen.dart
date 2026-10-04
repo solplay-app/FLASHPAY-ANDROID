@@ -4,9 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
+import '../core/api.dart';
 import '../core/models.dart';
+import '../core/pin_service.dart';
 import '../data/me.dart';
 import '../state/providers.dart';
+import 'pin_screens.dart';
 import 'theme.dart';
 
 /// Écran 4 : ticket de confirmation (montants calculés par le backend), paiement, puis suivi du statut.
@@ -66,15 +69,20 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   Future<void> _pay() async {
     final payer = _payerPhone;
     if (payer == null) return toast(context, 'Numéro à débiter invalide (10 chiffres, commençant par 01, 05 ou 07)');
+    // Code PIN (ou empreinte) obligatoire avant toute transaction ; le serveur le revérifie.
+    final pin = await askPin(context, reason: 'Confirmez le transfert de ${fcfa(widget.quote.total)}');
+    if (pin == null || !mounted) return;
     setState(() => _busy = true);
     try {
       final tx = await ref.read(repoProvider).create(
-            net: widget.quote.net, sender: widget.from, receiver: widget.to, phone: widget.phone, payerPhone: payer, idempotencyKey: _key, cagnotteCode: widget.cagnotteCode);
+            net: widget.quote.net, sender: widget.from, receiver: widget.to, phone: widget.phone, payerPhone: payer, idempotencyKey: _key, cagnotteCode: widget.cagnotteCode, pin: pin.pin);
       if (!mounted) return;
       setState(() => _tx = tx);
       if (tx.redirectUrl != null) await _open(tx.redirectUrl!);
       _poll = Timer.periodic(const Duration(seconds: 4), (_) => _refresh());
     } catch (e) {
+      // Le PIN mémorisé par l'empreinte n'est plus le bon (changé ailleurs) : on désactive l'empreinte.
+      if (pin.viaBiometric && e is ApiError && e.code == 'PIN_INVALIDE') await PinService.clearBiometric();
       if (mounted) toast(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);

@@ -32,6 +32,7 @@ class Repo {
     required String payerPhone,
     required String idempotencyKey,
     String? cagnotteCode,
+    String? pin,
   }) =>
       _run(() async {
         final r = await _dio.post('/transfers', data: {
@@ -42,6 +43,7 @@ class Repo {
           'payerPhone': payerPhone,
           'idempotencyKey': idempotencyKey,
           if (cagnotteCode != null) 'cagnotteCode': cagnotteCode,
+          if (pin != null) 'pin': pin, // vérifié par le serveur (code PIN obligatoire pour toute transaction)
         });
         return Transfer.fromJson(r.data);
       });
@@ -76,5 +78,20 @@ class Repo {
   Future<void> readAllNotices() => _run(() => _dio.post('/notices/read-all'));
 
   // Notifications push : envoie le jeton Firebase du téléphone au serveur.
+  // Code PIN : état, création, vérification, changement, réinitialisation par SMS.
+  Future<PinStatus> pinStatus() => _run(() async => PinStatus.fromJson(Map<String, dynamic>.from((await _dio.get('/pin/status')).data as Map)));
+  Future<void> setPin(String pin) => _run(() => _dio.post('/pin/set', data: {'pin': pin}));
+  Future<void> verifyPin(String pin) => _run(() => _dio.post('/pin/verify', data: {'pin': pin}));
+  Future<void> changePin(String ancien, String nouveau) => _run(() => _dio.post('/pin/change', data: {'ancien': ancien, 'nouveau': nouveau}));
+  Future<void> resetPin(String code, String nouveau) => _run(() => _dio.post('/pin/reset', data: {'code': code, 'nouveau': nouveau}));
+
   Future<void> registerPush(String token) => _run(() => _dio.post('/push/token', data: {'token': token, 'plateforme': 'android'}));
+}
+
+/// État du code PIN du compte (réponse de GET /pin/status).
+class PinStatus {
+  PinStatus({required this.defini, this.secondesBloque = 0});
+  final bool defini;
+  final int secondesBloque;
+  factory PinStatus.fromJson(Map<String, dynamic> j) => PinStatus(defini: j['defini'] == true, secondesBloque: (j['secondesBloque'] as num?)?.toInt() ?? 0);
 }

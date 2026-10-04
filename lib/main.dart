@@ -6,6 +6,7 @@ import 'core/notifications.dart';
 import 'state/providers.dart';
 import 'ui/auth_screen.dart';
 import 'ui/home_screen.dart';
+import 'ui/pin_screens.dart';
 import 'ui/theme.dart';
 
 Future<void> main() async {
@@ -36,7 +37,7 @@ class FlashPayApp extends ConsumerWidget {
       home: auth.when(
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (_, __) => const AuthScreen(),
-        data: (s) => s == null ? const AuthScreen() : const HomeScreen(),
+        data: (s) => s == null ? const AuthScreen() : const PinGate(child: HomeScreen()),
       ),
     );
   }

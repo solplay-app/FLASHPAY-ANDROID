@@ -84,6 +84,9 @@ jobs:
           M=android/app/src/main/AndroidManifest.xml
           grep -q REQUEST_INSTALL_PACKAGES "$M" || sed -i 's#<application#<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n    <application#' "$M"
 
+      - name: Installation des mises à jour (provider ota_update)
+        run: python3 tools/ci_ota_provider.py
+
       - name: Clé de signature
         env:
           KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}

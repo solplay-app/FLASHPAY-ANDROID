@@ -65,6 +65,9 @@ jobs:
       - name: Icône FlashPay
         run: cp -r android_res/. android/app/src/main/res/
 
+      - name: Nom de l'application
+        run: sed -i 's/android:label="[^"]*"/android:label="FlashPay"/' android/app/src/main/AndroidManifest.xml
+
       - name: Firebase (facultatif)
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}

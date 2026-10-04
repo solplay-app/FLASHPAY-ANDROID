@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
 import 'package:intl/intl.dart';
 import '../core/models.dart';
 import '../core/notifications.dart';
+import '../core/updater.dart';
 import '../data/me.dart';
 import '../state/providers.dart';
 import 'cagnotte_screen.dart';
@@ -13,7 +14,7 @@ import 'notice_screen.dart';
 import 'support_screen.dart';
 import 'theme.dart';
 
-const _titleStyle = TextStyle(fontFamily: fpSerif, fontSize: 26, fontWeight: FontWeight.w800, color: fpInk);
+const _titleStyle = TextStyle(fontFamily: fpSerif, fontSize: 21, fontWeight: FontWeight.w800, color: fpInk);
 
 void _push(BuildContext c, Widget w) => Navigator.push(c, MaterialPageRoute(builder: (_) => w));
 
@@ -25,33 +26,33 @@ class TxRow extends StatelessWidget {
   final Transfer t;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.only(bottom: 10),
         child: SoftCard(
-          radius: 22,
-          padding: const EdgeInsets.all(14),
+          radius: 18,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            OpLogo(t.to, size: 60),
-            const SizedBox(width: 14),
+            OpLogo(t.to, size: 42),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Wrap(crossAxisAlignment: WrapCrossAlignment.end, spacing: 14, children: [
-                  Text(fcfa(t.net), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: fpInk)),
-                  Text(t.phone, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: fpInk)),
+                Wrap(crossAxisAlignment: WrapCrossAlignment.end, spacing: 10, children: [
+                  Text(fcfa(t.net), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: fpInk)),
+                  Text(t.phone, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fpInk)),
                 ]),
-                const SizedBox(height: 2),
-                Text('${t.from.label} → ${t.to.label}', style: const TextStyle(fontSize: 15, color: fpInk)),
+                const SizedBox(height: 1),
+                Text('${t.from.label} → ${t.to.label}', style: const TextStyle(fontSize: 12.5, color: fpInk)),
                 if (t.createdAt != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 3),
                     child: Row(children: [
-                      const Icon(Icons.calendar_month_outlined, size: 18, color: fpMute),
-                      const SizedBox(width: 6),
-                      Text(DateFormat('dd/MM HH:mm').format(t.createdAt!), style: const TextStyle(fontSize: 14, color: fpMute)),
+                      const Icon(Icons.calendar_month_outlined, size: 14, color: fpMute),
+                      const SizedBox(width: 5),
+                      Text(DateFormat('dd/MM HH:mm').format(t.createdAt!), style: const TextStyle(fontSize: 11.5, color: fpMute)),
                     ]),
                   ),
               ]),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             StatusChip(label: t.label, color: t.color),
           ]),
         ),
@@ -77,20 +78,27 @@ class HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final a = ShellActions.maybeOf(context);
     final list = ref.watch(transfersProvider);
-    return GradientBackdrop(
+    return UpdateGate(
+      child: GradientBackdrop(
       child: Stack(children: [
         Column(children: [
-          const HeaderBlock(),
+          // Zone fixe : ne bouge pas quand on fait défiler les transactions.
+          const HeaderBlock(showClock: true),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Column(children: [
+              BigButton(label: 'Transférer des fonds', icon: Icons.bolt_rounded, onTap: () => a?.goTab(1)),
+              const SizedBox(height: 10),
+              BigButton(label: 'Cagnottes', icon: Icons.groups_outlined, dark: false, onTap: () => a?.goTab(3)),
+            ]),
+          ),
+          // Seule la liste des transactions défile.
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => ref.refresh(transfersProvider.future),
-              child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 120), children: [
-                BigButton(label: 'Transférer des fonds', icon: Icons.bolt_rounded, onTap: () => a?.goTab(1)),
-                const SizedBox(height: 14),
-                BigButton(label: 'Cagnottes', icon: Icons.groups_outlined, dark: false, onTap: () => a?.goTab(3)),
-                const SizedBox(height: 30),
+              child: ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 110), children: [
                 const Text('Dernières transactions', style: _titleStyle),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _txList(list, max: 8),
               ]),
             ),
@@ -125,7 +133,7 @@ class HomeTab extends ConsumerWidget {
           ),
         ),
       ]),
-    );
+    ));
   }
 }
 
@@ -345,6 +353,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
               subtitle: _notif ? 'Activées' : 'Désactivées : touchez pour activer',
               onTap: _toggleNotifications,
             ),
+            _item(Icons.system_update_outlined, 'Mise à jour', subtitle: 'Version installée : $kBuildName', onTap: () => Updater.check(context, manual: true)),
             _item(Icons.support_agent, 'Support', onTap: () => _push(context, const SupportScreen())),
             const SizedBox(height: 6),
             _item(Icons.logout, 'Se déconnecter', color: const Color(0xFFD93025), onTap: () => ref.read(authProvider.notifier).logout()),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/models.dart';
 import 'theme.dart';
@@ -54,20 +55,20 @@ class LogoPill extends StatelessWidget {
   final bool dark;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(6, 6, 16, 6),
+        padding: const EdgeInsets.fromLTRB(5, 5, 14, 5),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(dark ? .14 : .5),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [brand, Color(0xFF9B5CF6)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 24),
+            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 10),
           Text.rich(
@@ -75,16 +76,17 @@ class LogoPill extends StatelessWidget {
               TextSpan(text: 'Flash', style: TextStyle(color: dark ? Colors.white : fpInk)),
               TextSpan(text: 'Pay', style: TextStyle(color: dark ? const Color(0xFFD3C2FF) : brand)),
             ]),
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.3),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.3),
           ),
         ]),
       );
 }
 
-/// En-tête : logo + messages (cloche) + vérification d'identité + compte.
+/// En-tête : logo + messages (cloche) + compte. (La vérification d'identité est dans l'onglet Compte.)
 class HeaderBlock extends StatelessWidget {
-  const HeaderBlock({super.key, this.dark = false});
+  const HeaderBlock({super.key, this.dark = false, this.showClock = false});
   final bool dark;
+  final bool showClock; // affiche la date et l'heure sous le logo (accueil)
   @override
   Widget build(BuildContext context) {
     final a = ShellActions.maybeOf(context);
@@ -92,19 +94,21 @@ class HeaderBlock extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 6, 4),
-        child: Row(children: [
+        padding: const EdgeInsets.fromLTRB(16, 4, 6, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+         Row(children: [
           LogoPill(dark: dark),
           const Spacer(),
           if (a != null) ...[
             IconButton(
               tooltip: 'Messages',
               onPressed: a.openMessages,
-              icon: Badge(isLabelVisible: a.unread > 0, smallSize: 10, backgroundColor: const Color(0xFF8B5CF6), child: Icon(Icons.notifications_none_rounded, color: fg, size: 30)),
+              icon: Badge(isLabelVisible: a.unread > 0, smallSize: 10, backgroundColor: const Color(0xFF8B5CF6), child: Icon(Icons.notifications_none_rounded, color: fg, size: 26)),
             ),
-            IconButton(tooltip: 'Vérification d’identité', onPressed: a.openKyc, icon: Icon(Icons.verified_user_outlined, color: fg, size: 30)),
-            IconButton(tooltip: 'Mon compte', onPressed: a.openAccount, icon: Icon(Icons.account_circle_outlined, color: fg, size: 32)),
+            IconButton(tooltip: 'Mon compte', onPressed: a.openAccount, icon: Icon(Icons.account_circle_outlined, color: fg, size: 28)),
           ],
+         ]),
+         if (showClock) Padding(padding: const EdgeInsets.only(left: 6, top: 2), child: DateTimeLine(color: fg)),
         ]),
       ),
     );
@@ -154,7 +158,7 @@ class BigButton extends StatelessWidget {
     final fg = dark ? Colors.white : fpDeep;
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         gradient: dark
             ? const LinearGradient(colors: [Color(0xFF3A1766), Color(0xFF52258C)], begin: Alignment.topLeft, end: Alignment.bottomRight)
             : null,
@@ -164,14 +168,14 @@ class BigButton extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           onTap: onTap,
           child: SizedBox(
-            height: dark ? 86 : 68,
+            height: dark ? 64 : 52,
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(icon, color: dark ? const Color(0xFFDCD3EE) : fg, size: dark ? 40 : 28),
-              const SizedBox(width: 12),
-              Text(label, style: TextStyle(color: fg, fontSize: dark ? 22 : 20, fontWeight: FontWeight.w600)),
+              Icon(icon, color: dark ? const Color(0xFFDCD3EE) : fg, size: dark ? 28 : 22),
+              const SizedBox(width: 10),
+              Text(label, style: TextStyle(color: fg, fontSize: dark ? 17 : 16, fontWeight: FontWeight.w600)),
             ]),
           ),
         ),
@@ -216,9 +220,9 @@ class StatusChip extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(color: color.withOpacity(.16), borderRadius: BorderRadius.circular(22)),
-        child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 15)),
+        child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12)),
       );
 }
 
@@ -244,7 +248,7 @@ class FlashNavBar extends StatelessWidget {
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 74,
+            height: 64,
             child: Row(children: [
               for (var i = 0; i < _items.length; i++)
                 Expanded(
@@ -257,14 +261,14 @@ class FlashNavBar extends StatelessWidget {
                         width: i == index ? 56 : 0,
                         decoration: BoxDecoration(color: fpDeep, borderRadius: BorderRadius.circular(3)),
                       ),
-                      const SizedBox(height: 10),
-                      Icon(i == index ? _items[i].$2 : _items[i].$1, size: 28, color: i == index ? fpDeep : const Color(0xFF55506A)),
+                      const SizedBox(height: 7),
+                      Icon(i == index ? _items[i].$2 : _items[i].$1, size: 24, color: i == index ? fpDeep : const Color(0xFF55506A)),
                       const SizedBox(height: 4),
                       Text(
                         _items[i].$3,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, fontWeight: i == index ? FontWeight.w800 : FontWeight.w500, color: i == index ? fpDeep : const Color(0xFF55506A)),
+                        style: TextStyle(fontSize: 11, fontWeight: i == index ? FontWeight.w800 : FontWeight.w500, color: i == index ? fpDeep : const Color(0xFF55506A)),
                       ),
                     ]),
                   ),
@@ -273,4 +277,47 @@ class FlashNavBar extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// Date et heure en français, mises à jour toutes les secondes (ex. « Dimanche 4 octobre · 09:52 »).
+class DateTimeLine extends StatefulWidget {
+  const DateTimeLine({super.key, this.color = fpInk});
+  final Color color;
+  @override
+  State<DateTimeLine> createState() => _DateTimeLineState();
+}
+
+class _DateTimeLineState extends State<DateTimeLine> {
+  static const _jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+  static const _mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  late DateTime _now = DateTime.now();
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final n = DateTime.now();
+      if (n.minute != _now.minute || n.day != _now.day) setState(() => _now = n);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _two(int v) => v.toString().padLeft(2, '0');
+
+  @override
+  Widget build(BuildContext context) {
+    final n = _now;
+    final date = '${_jours[n.weekday - 1]} ${n.day} ${_mois[n.month - 1]}';
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.schedule_rounded, size: 15, color: widget.color.withOpacity(.7)),
+      const SizedBox(width: 5),
+      Text('$date · ${_two(n.hour)}:${_two(n.minute)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: widget.color.withOpacity(.85))),
+    ]);
+  }
 }

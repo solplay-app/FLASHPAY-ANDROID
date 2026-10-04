@@ -31,6 +31,7 @@
 #   - iOS n'est pas compilé ici (compte Apple Developer nécessaire).
 #   - android/ et ios/ ne sont PAS dans le dépôt : ils sont régénérés à chaque compilation.
 #     Le code de l'app est dans lib/.
+#   - L'icône vient du dossier android_res/ (à la racine du dépôt), copié après la génération.
 # ============================================================================
 
 name: Build Android
@@ -60,6 +61,9 @@ jobs:
       # android/ et ios/ ne sont pas versionnés : on les génère ici (lib/ n'est pas touché).
       - name: Générer les dossiers de plateforme
         run: flutter create . --org ci.flashpay --project-name flashpay_app --platforms android
+
+      - name: Icône FlashPay
+        run: cp -r android_res/. android/app/src/main/res/
 
       - name: Firebase (facultatif)
         env:

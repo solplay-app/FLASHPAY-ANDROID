@@ -87,6 +87,9 @@ jobs:
       - name: Installation des mises à jour (provider ota_update)
         run: python3 tools/ci_ota_provider.py
 
+      - name: Empreinte digitale (local_auth)
+        run: python3 tools/ci_biometrie.py
+
       - name: Clé de signature
         env:
           KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}

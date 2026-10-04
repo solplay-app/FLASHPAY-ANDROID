@@ -110,6 +110,17 @@ jobs:
             --dart-define=API_URL=${{ secrets.API_URL }} \
             --dart-define=BUILD_NUMBER=${{ github.run_number }} --dart-define=BUILD_NAME=1.0.${{ github.run_number }}
 
+      - name: Vérifier l'APK (diagnostic, ne bloque jamais)
+        continue-on-error: true
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          ls -l "$APK"
+          echo "=== SIGNATURE ==="
+          "$BT/apksigner" verify --verbose --print-certs "$APK" || true
+          echo "=== CONTENU ==="
+          "$BT/aapt" dump badging "$APK" | grep -E "^package|minSdkVersion|targetSdkVersion|native-code" || true
+
       - name: Préparer la publication
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk flashpay.apk

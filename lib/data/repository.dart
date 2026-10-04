@@ -67,4 +67,11 @@ class Repo {
             'nom': nom, 'objectif': objectif, 'dateFin': dateFin, 'operateur': op.api, 'telephone': phone,
           })).data));
   Future<void> closeCagnotte(String id) => _run(() => _dio.post('/cagnottes/$id/close'));
+
+  // Compte connecté : { id, numeroTelephone, kycStatut }
+  Future<Map<String, dynamic>> me() => _run(() async => Map<String, dynamic>.from((await _dio.get('/me')).data as Map));
+
+  // Messages de FlashPay (maintenance, incident, bonus…) : { nonLus: int, rows: [...] }
+  Future<Map<String, dynamic>> notices() => _run(() async => Map<String, dynamic>.from((await _dio.get('/notices')).data as Map));
+  Future<void> readAllNotices() => _run(() => _dio.post('/notices/read-all'));
 }

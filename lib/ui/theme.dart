@@ -3,11 +3,17 @@ import '../core/api.dart';
 import '../core/models.dart';
 
 const brand = Color(0xFF6C2BD9);
+const fpInk = Color(0xFF1B1530); // texte
+const fpMute = Color(0xFF6B647F); // texte secondaire
+const fpPaper = Color(0xFFF6F4F0); // fond des pages
+const fpDeep = Color(0xFF3F1C6E); // boutons principaux, violet profond
+const fpLavender = Color(0xFFC9B9FA); // boutons secondaires
+const fpSerif = 'serif'; // titres (police serif du téléphone, aucune dépendance)
 
 final appTheme = ThemeData(
   useMaterial3: true,
   colorScheme: ColorScheme.fromSeed(seedColor: brand),
-  scaffoldBackgroundColor: const Color(0xFFF7F5FC),
+  scaffoldBackgroundColor: fpPaper,
   appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, scrolledUnderElevation: 0, centerTitle: false),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
@@ -19,6 +25,8 @@ final appTheme = ThemeData(
   ),
   filledButtonTheme: FilledButtonThemeData(
     style: FilledButton.styleFrom(
+      backgroundColor: fpDeep,
+      foregroundColor: Colors.white,
       minimumSize: const Size.fromHeight(56),
       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

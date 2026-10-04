@@ -5,13 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import '../core/models.dart';
+import '../data/me.dart';
 import '../state/providers.dart';
 import 'theme.dart';
 
 /// Écran 4 : ticket de confirmation (montants calculés par le backend), paiement, puis suivi du statut.
 class ConfirmScreen extends ConsumerStatefulWidget {
-  const ConfirmScreen({super.key, required this.quote, required this.from, required this.to, required this.phone, this.cagnotteCode});
+  const ConfirmScreen({super.key, required this.quote, required this.from, required this.to, required this.phone, this.cagnotteCode, this.payerPhone});
   final String? cagnotteCode;
+  final String? payerPhone; // numéro à débiter choisi à l'étape 1 (reste modifiable ici)
   final Quote quote;
   final Op from, to;
   final String phone;
@@ -26,6 +28,20 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   Transfer? _tx;
   bool _busy = false;
   Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.payerPhone;
+    if (p != null && p.isNotEmpty) {
+      _payer.text = p.replaceFirst('+225', '');
+    } else {
+      // Cagnotte : on propose le numéro du compte.
+      ref.read(meProvider.future).then((m) {
+        if (mounted && _payer.text.isEmpty) _payer.text = m.local;
+      }).catchError((_) {});
+    }
+  }
 
   @override
   void dispose() {

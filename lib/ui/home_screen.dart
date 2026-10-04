@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
-import 'package:intl/intl.dart';
 import '../core/models.dart';
 import '../core/notifications.dart';
+import '../data/me.dart';
 import '../state/providers.dart';
-import 'cagnotte_screen.dart';
+import 'design.dart';
 import 'kyc_screen.dart';
-import 'support_screen.dart';
+import 'notice_screen.dart';
+import 'tabs.dart';
 import 'theme.dart';
 import 'transfer_screen.dart';
 
-/// Écran 2 : tableau de bord.
+/// Écran principal : 5 onglets (Accueil · Actions · Transactions · Cagnottes · Compte).
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
   @override
@@ -20,37 +21,52 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _poll;
+  Timer? _pollNotices;
   final Map<String, String> _seen = {};
-  bool _notif = false;
+  final Set<String> _noticeSeen = {};
+  bool _noticeInit = false; // la 1re lecture ne déclenche pas de notification
+  int _unread = 0;
+  int _tab = 0;
+  final _transferKey = GlobalKey<TransferScreenState>();
 
   @override
   void initState() {
     super.initState();
-    // « Temps réel » : relecture toutes les 10 s tant que l'écran est ouvert.
-    Notifier.enabled().then((v) => mounted ? setState(() => _notif = v) : null);
+    // « Temps réel » : relecture régulière tant que l'application est ouverte.
     _poll = Timer.periodic(const Duration(seconds: 10), (_) => ref.invalidate(transfersProvider));
+    _pollNotices = Timer.periodic(const Duration(seconds: 30), (_) => ref.invalidate(noticesProvider));
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _pollNotices?.cancel();
     super.dispose();
   }
 
-  Future<void> _toggleNotifications() async {
-    if (await Notifier.enabled()) {
-      if (mounted) toast(context, 'Notifications activées. Pour les couper : Réglages > Applications > FlashPay > Notifications.');
-      return;
-    }
-    final ok = await Notifier.request();
-    if (!mounted) return;
-    setState(() => _notif = ok);
-    toast(context, ok ? 'Notifications activées.' : 'Refusées. Activez-les dans Réglages > Applications > FlashPay > Notifications.');
+  void _goTab(int i) => setState(() => _tab = i);
+
+  Future<void> _openMessages() async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const NoticeScreen()));
+    if (mounted) ref.invalidate(noticesProvider);
   }
 
   @override
   Widget build(BuildContext context) {
-    final list = ref.watch(transfersProvider);
+    ref.watch(meProvider); // garde le compte en mémoire tant que l'écran est ouvert
+    // Messages de FlashPay : nombre de non lus (on garde la dernière valeur pendant un rechargement).
+    _unread = ref.watch(noticesProvider).maybeWhen(data: (b) => b.unread, orElse: () => _unread);
+    // Nouveau message reçu pendant que l'app est ouverte → notification sur le téléphone.
+    ref.listen(noticesProvider, (_, next) {
+      next.whenData((box) {
+        for (final n in box.items) {
+          if (!n.lu && _noticeSeen.add(n.id) && _noticeInit) {
+            Notifier.show('FlashPay · ${n.titre}', n.message);
+          }
+        }
+        _noticeInit = true;
+      });
+    });
     // Notification quand un transfert « en cours » passe à réussi / échec / remboursé.
     ref.listen(transfersProvider, (_, next) {
       next.whenData((items) {
@@ -62,74 +78,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
       });
     });
-    return Scaffold(
-      appBar: AppBar(
-        title: const FlashPayLogo(),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: Icon(_notif ? Icons.notifications_active : Icons.notifications_off_outlined),
-            onPressed: _toggleNotifications,
+
+    return ShellActions(
+      unread: _unread,
+      openMessages: _openMessages,
+      openKyc: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KycScreen())),
+      openAccount: () => _goTab(4),
+      goTab: _goTab,
+      child: PopScope(
+        // Retour : recule dans le transfert, sinon revient à l'accueil, sinon quitte l'application.
+        canPop: _tab == 0,
+        onPopInvoked: (didPop) {
+          if (didPop) return;
+          if (_tab == 1 && (_transferKey.currentState?.goBack() ?? false)) return;
+          _goTab(0);
+        },
+        child: Scaffold(
+          backgroundColor: fpPaper,
+          body: IndexedStack(
+            index: _tab,
+            sizing: StackFit.expand,
+            children: [
+              const HomeTab(),
+              TransferScreen(key: _transferKey),
+              const TransactionsTab(),
+              const CagnotteTab(),
+              const AccountTab(),
+            ],
           ),
-          IconButton(
-            tooltip: 'Vérification d’identité',
-            icon: const Icon(Icons.verified_user_outlined),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KycScreen())),
-          ),
-          IconButton(tooltip: 'Déconnexion', icon: const Icon(Icons.logout), onPressed: () => ref.read(authProvider.notifier).logout()),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Support',
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen())),
-        child: const Icon(Icons.support_agent),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.refresh(transfersProvider.future),
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), children: [
-          FilledButton.icon(
-            icon: const Icon(Icons.send),
-            label: const Text('Transférer des fonds'),
-            onPressed: () async {
-              await Navigator.push(context, MaterialPageRoute(builder: (_) => const TransferScreen()));
-              ref.invalidate(transfersProvider);
-            },
-          ),
-          const SizedBox(height: 10),
-          FilledButton.tonalIcon(
-            icon: const Icon(Icons.groups_outlined),
-            label: const Text('Cagnottes'),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CagnotteListScreen())).then((_) => ref.invalidate(transfersProvider)),
-          ),
-          const SizedBox(height: 24),
-          const Text('Dernières transactions', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-          const SizedBox(height: 8),
-          list.when(
-            loading: () => const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
-            error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('$e')),
-            data: (items) => items.isEmpty
-                ? const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('Aucune transaction pour le moment.')))
-                : Column(children: [for (final t in items) _Row(t)]),
-          ),
-        ]),
+          bottomNavigationBar: FlashNavBar(index: _tab, onChanged: _goTab),
+        ),
       ),
     );
   }
-}
-
-class _Row extends StatelessWidget {
-  const _Row(this.t);
-  final Transfer t;
-  @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: OpLogo(t.to),
-        title: Text('${fcfa(t.net)} → ${t.phone}'),
-        subtitle: Text('${t.from.label} → ${t.to.label}${t.createdAt == null ? '' : ' · ${DateFormat('dd/MM HH:mm').format(t.createdAt!)}'}'),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(color: t.color.withOpacity(.14), borderRadius: BorderRadius.circular(20)),
-          child: Text(t.label, style: TextStyle(color: t.color, fontWeight: FontWeight.w700, fontSize: 12)),
-        ),
-      );
 }

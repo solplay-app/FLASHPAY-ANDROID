@@ -1,0 +1,7 @@
+Après avoir envoyé les 5 fichiers de ce zip (dossier lib/ à la racine du dépôt FLASHPAY-ANDROID),
+SUPPRIMER ces 5 doublons mal placés dans lib/ :
+  lib/push.dart
+  lib/home_screen.dart
+  lib/providers.dart
+  lib/repository.dart
+  lib/notifications.dart

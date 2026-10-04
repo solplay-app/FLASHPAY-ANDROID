@@ -11,6 +11,11 @@ class Notifier {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false),
     ));
+    // Canal utilisé aussi par les notifications push (channelId « transferts » côté serveur).
+    await _android?.createNotificationChannel(const AndroidNotificationChannel(
+      'transferts', 'Transferts',
+      description: 'Statut de vos transferts et messages FlashPay', importance: Importance.high,
+    ));
   }
 
   static AndroidFlutterLocalNotificationsPlugin? get _android =>

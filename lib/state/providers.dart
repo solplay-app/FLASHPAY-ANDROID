@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api.dart';
 import '../core/models.dart';
+import '../core/push.dart';
 import '../data/repository.dart';
 
 /// null = non connecté ; 'CONNECTE' = jeton présent. `loading` tant que le jeton n'est pas lu.
@@ -14,6 +15,7 @@ class AuthNotifier extends AsyncNotifier<String?> {
   }
 
   Future<void> logout() async {
+    await Push.stop(); // le téléphone ne reçoit plus les notifications de ce compte
     await clearToken();
     state = const AsyncData(null);
   }

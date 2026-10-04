@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
 import '../core/models.dart';
 import '../core/notifications.dart';
+import '../core/push.dart';
 import '../data/me.dart';
 import '../state/providers.dart';
 import 'design.dart';
@@ -35,6 +36,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // « Temps réel » : relecture régulière tant que l'application est ouverte.
     _poll = Timer.periodic(const Duration(seconds: 10), (_) => ref.invalidate(transfersProvider));
     _pollNotices = Timer.periodic(const Duration(seconds: 30), (_) => ref.invalidate(noticesProvider));
+    // Push : enregistre le téléphone ; à la réception (app ouverte) on relit tout de suite, la notification locale s'affiche alors.
+    Push.start(ref.read(repoProvider), onMessage: () {
+      ref.invalidate(transfersProvider);
+      ref.invalidate(noticesProvider);
+    });
   }
 
   @override

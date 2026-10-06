@@ -12,6 +12,7 @@ import 'design.dart';
 import 'kyc_screen.dart';
 import 'notice_screen.dart';
 import 'pin_screens.dart';
+import 'share_screen.dart';
 import 'support_screen.dart';
 import 'theme.dart';
 
@@ -356,6 +357,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
               onTap: _toggleNotifications,
             ),
             _item(Icons.system_update_outlined, 'Mise à jour', subtitle: 'Version installée : $kBuildName', onTap: () => Updater.check(context, manual: true)),
+            _item(Icons.qr_code_2, 'Partager l’application', subtitle: 'QR code pour installer FlashPay', onTap: () => _push(context, const ShareAppScreen())),
             _item(Icons.support_agent, 'Support', onTap: () => _push(context, const SupportScreen())),
             const SizedBox(height: 6),
             _item(Icons.logout, 'Se déconnecter', color: const Color(0xFFD93025), onTap: () => ref.read(authProvider.notifier).logout()),

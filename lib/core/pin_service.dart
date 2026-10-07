@@ -15,6 +15,10 @@ class PinService {
   static const _kBioPin = 'bio_pin';
   static final LocalAuthentication _auth = LocalAuthentication();
 
+  /// Vrai juste après une connexion par SMS ou la création du PIN : l'utilisateur vient de s'identifier,
+  /// on ne lui redemande pas tout de suite le code (consommé une seule fois par le verrou de l'application).
+  static bool skipNextLock = false;
+
   /// Le téléphone a un capteur ET au moins une empreinte enregistrée.
   static Future<bool> biometricAvailable() async {
     try {

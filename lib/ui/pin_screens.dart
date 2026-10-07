@@ -268,7 +268,10 @@ class _PinGateState extends ConsumerState<PinGate> {
             );
           }
           if (snap.data!.defini) return widget.child;
-          return PinSetupScreen(onDone: _reload);
+          return PinSetupScreen(onDone: () {
+            PinService.skipNextLock = true;
+            _reload();
+          });
         },
       );
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Notifier;
 import 'core/notifications.dart';
 import 'state/providers.dart';
+import 'ui/app_lock.dart';
 import 'ui/auth_screen.dart';
 import 'ui/home_screen.dart';
 import 'ui/pin_screens.dart';
@@ -33,11 +34,12 @@ class FlashPayApp extends ConsumerWidget {
     return MaterialApp(
       title: 'FlashPay',
       debugShowCheckedModeBanner: false,
+      navigatorKey: rootNavigatorKey,
       theme: appTheme,
       home: auth.when(
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (_, __) => const AuthScreen(),
-        data: (s) => s == null ? const AuthScreen() : const PinGate(child: HomeScreen()),
+        data: (s) => s == null ? const AuthScreen() : const PinGate(child: AppLock(child: HomeScreen())),
       ),
     );
   }

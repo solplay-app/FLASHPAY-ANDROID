@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../core/api.dart';
 import '../core/models.dart';
 import '../state/providers.dart';
+import 'app_lock.dart';
 import 'confirm_screen.dart';
 import 'operator_picker.dart';
 import 'theme.dart';
@@ -138,6 +139,8 @@ class _CreateState extends ConsumerState<CreateCagnotteScreen> {
     if (phone.length != 10) return toast(context, 'Numéro invalide (10 chiffres)');
     final op = _op ?? detectOp(phone);
     if (op == null) return toast(context, 'Choisissez le réseau de réception');
+    if (!await confirmSensitive(context, ref, 'Confirmez la création de la cagnotte')) return;
+    if (!mounted) return;
     setState(() => _busy = true);
     try {
       final c = await ref.read(repoProvider).createCagnotte(
@@ -239,6 +242,8 @@ class _DetailState extends ConsumerState<CagnotteDetailScreen> {
       ),
     );
     if (ok != true) return;
+    if (!await confirmSensitive(context, ref, 'Confirmez la clôture de la cagnotte')) return;
+    if (!mounted) return;
     try {
       await ref.read(repoProvider).closeCagnotte(_c.id);
       await _refresh();

@@ -13,6 +13,7 @@ class AuthNotifier extends AsyncNotifier<String?> {
   Future<void> login(String token) async {
     await PinService.clearBiometric(); // pas de PIN mémorisé d'un autre compte
     await saveToken(token);
+    PinService.skipNextLock = true;
     state = const AsyncData('CONNECTE');
   }
 

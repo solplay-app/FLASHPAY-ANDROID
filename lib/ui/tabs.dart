@@ -17,6 +17,9 @@ import 'share_screen.dart';
 import 'support_screen.dart';
 import 'theme.dart';
 
+// Build Play Store : lancer avec --dart-define=PLAY_BUILD=true pour masquer "Mise à jour".
+const bool kIsPlayBuild = bool.fromEnvironment('PLAY_BUILD', defaultValue: false);
+
 const _titleStyle = TextStyle(fontFamily: fpSerif, fontSize: 21, fontWeight: FontWeight.w800, color: fpInk);
 
 void _push(BuildContext c, Widget w) => Navigator.push(c, MaterialPageRoute(builder: (_) => w));

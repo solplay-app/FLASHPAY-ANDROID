@@ -11,6 +11,7 @@ import 'cagnotte_screen.dart';
 import 'design.dart';
 import 'kyc_screen.dart';
 import 'notice_screen.dart';
+import 'jeux_screens.dart';
 import 'pin_screens.dart';
 import 'share_screen.dart';
 import 'support_screen.dart';
@@ -92,6 +93,7 @@ class HomeTab extends ConsumerWidget {
               BigButton(label: 'Transférer des fonds', icon: Icons.bolt_rounded, onTap: () => a?.goTab(1)),
               const SizedBox(height: 10),
               BigButton(label: 'Cagnottes', icon: Icons.groups_outlined, dark: false, onTap: () => a?.goTab(3)),
+              const JeuxHomeButton(), // n'apparaît que s'il y a des jeux (roue, coffre, tombola)
             ]),
           ),
           // Seule la liste des transactions défile.
@@ -342,6 +344,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
             ),
             const SizedBox(height: 18),
             _item(Icons.verified_user_outlined, 'Vérification d’identité', subtitle: 'Nécessaire pour les montants élevés', onTap: () => _push(context, const KycScreen())),
+            _item(Icons.card_giftcard_rounded, 'Jeux & cadeaux', subtitle: 'Roue, coffre, tombola', onTap: () => _push(context, const JeuxScreen())),
             _item(Icons.lock_outline, 'Sécurité', subtitle: 'Code PIN et empreinte digitale', onTap: () => _push(context, const SecurityScreen())),
             _item(
               Icons.mail_outline,
@@ -356,7 +359,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
               subtitle: _notif ? 'Activées' : 'Désactivées : touchez pour activer',
               onTap: _toggleNotifications,
             ),
-            _item(Icons.system_update_outlined, 'Mise à jour', subtitle: 'Version installée : $kBuildName', onTap: () => Updater.check(context, manual: true)),
+            if (!kIsPlayBuild) _item(Icons.system_update_outlined, 'Mise à jour', subtitle: 'Version installée : $kBuildName', onTap: () => Updater.check(context, manual: true)),
             _item(Icons.qr_code_2, 'Partager l’application', subtitle: 'QR code pour installer FlashPay', onTap: () => _push(context, const ShareAppScreen())),
             _item(Icons.support_agent, 'Support', onTap: () => _push(context, const SupportScreen())),
             const SizedBox(height: 6),

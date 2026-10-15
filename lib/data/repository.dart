@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../core/api.dart';
 import '../core/models.dart';
+import '../core/prets_models.dart';
 
 class Repo {
   Repo(this._dio);
@@ -59,7 +60,23 @@ class Repo {
 
   Future<String> kycStatus() => _run(() async => (await _dio.get('/kyc')).data['kycStatut'] as String);
   Future<void> submitKyc(String path) => _run(() => _dio.post('/kyc', data: {'documentPath': path}));
-  Future<String> firebaseToken() => _run(() async => (await _dio.get('/kyc/firebase-token')).data['token'] as String);
+  /// Envoi de la pièce : signature fournie par le serveur, puis envoi DIRECT à Cloudinary (client sans jeton FlashPay :
+  /// la clé secrète reste sur le serveur). Renvoie l'identifiant du fichier à transmettre à [submitKyc].
+  Future<String> uploadKycPhoto(String filePath) => _run(() async {
+        final sig = (await _dio.get('/kyc/upload-signature')).data as Map;
+        final up = Dio(BaseOptions(connectTimeout: const Duration(seconds: 20), sendTimeout: const Duration(seconds: 60), receiveTimeout: const Duration(seconds: 30)));
+        final r = await up.post(sig['uploadUrl'] as String,
+            data: FormData.fromMap({
+              'file': await MultipartFile.fromFile(filePath, filename: 'cni.jpg'),
+              'api_key': sig['apiKey'],
+              'timestamp': sig['timestamp'],
+              'signature': sig['signature'],
+              'public_id': sig['publicId'],
+              'type': sig['type'],
+              'allowed_formats': sig['allowedFormats'],
+            }));
+        return (r.data['public_id'] ?? sig['publicId']).toString();
+      });
   Future<String> userId() => _run(() async => (await _dio.get('/kyc/me')).data['id'] as String);
 
   Future<List<Cagnotte>> cagnottes() => _run(() async => ((await _dio.get('/cagnottes')).data as List).map((e) => Cagnotte.fromJson(e)).toList());
@@ -94,4 +111,16 @@ class PinStatus {
   final bool defini;
   final int secondesBloque;
   factory PinStatus.fromJson(Map<String, dynamic> j) => PinStatus(defini: j['defini'] == true, secondesBloque: (j['secondesBloque'] as num?)?.toInt() ?? 0);
+
+  // --- Petits prêts ---
+  Future<PretsData> prets() => _run(() async => PretsData.fromJson((await _dio.get('/prets')).data));
+  Future<Pret> pret(String id) => _run(() async => Pret.fromJson((await _dio.get('/prets/$id')).data));
+  Future<Pret> accepterPret({required String offreId, required int montant, required Op op, required String idempotencyKey, required String pin}) =>
+      _run(() async => Pret.fromJson((await _dio.post('/prets/accepter', data: {
+            'offreId': offreId, 'montant': montant, 'operateur': op.api, 'idempotencyKey': idempotencyKey, 'pin': pin,
+          })).data));
+  Future<Pret> rembourserPret({required String id, required Op op, required String payerPhone, required String idempotencyKey, required String pin}) =>
+      _run(() async => Pret.fromJson((await _dio.post('/prets/$id/rembourser', data: {
+            'operateur': op.api, 'payerPhone': payerPhone, 'idempotencyKey': idempotencyKey, 'pin': pin,
+          })).data));
 }

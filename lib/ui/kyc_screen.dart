@@ -1,13 +1,11 @@
 import 'dart:io';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../state/providers.dart';
 import 'theme.dart';
 
-/// Écran 5 : certification KYC. Photo de la pièce → Firebase Storage (kyc/<id>/<fichier>) → chemin transmis au backend.
+/// Écran 5 : certification KYC. Photo de la pièce → Cloudinary (envoi direct, signé par le serveur) → identifiant transmis au backend.
 class KycScreen extends ConsumerStatefulWidget {
   const KycScreen({super.key});
   @override
@@ -28,11 +26,7 @@ class _KycScreenState extends ConsumerState<KycScreen> {
     setState(() => _busy = true);
     try {
       final repo = ref.read(repoProvider);
-      // Le backend délivre un jeton Firebase lié à l'id du compte : les Storage Rules limitent chacun à son dossier.
-      await FirebaseAuth.instance.signInWithCustomToken(await repo.firebaseToken());
-      final uid = await repo.userId();
-      final path = 'kyc/$uid/cni_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await FirebaseStorage.instance.ref(path).putFile(File(_photo!.path), SettableMetadata(contentType: 'image/jpeg'));
+      final path = await repo.uploadKycPhoto(_photo!.path);
       await repo.submitKyc(path);
       ref.invalidate(kycProvider);
       ref.invalidate(limitsProvider);
@@ -41,7 +35,7 @@ class _KycScreenState extends ConsumerState<KycScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) toast(context, e is FirebaseException ? 'Envoi impossible (${e.code})' : e);
+      if (mounted) toast(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

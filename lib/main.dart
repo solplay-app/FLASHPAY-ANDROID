@@ -12,7 +12,7 @@ import 'ui/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Firebase (App Check + Storage pour le KYC). Nécessite google-services.json / GoogleService-Info.plist.
+  // Firebase (App Check + notifications push ; le KYC est sur Cloudinary). Nécessite google-services.json / GoogleService-Info.plist.
   try {
     await Firebase.initializeApp();
     await FirebaseAppCheck.instance.activate(

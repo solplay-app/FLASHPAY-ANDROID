@@ -13,6 +13,7 @@ import 'kyc_screen.dart';
 import 'notice_screen.dart';
 import 'jeux_screens.dart';
 import 'pin_screens.dart';
+import 'prets_screens.dart';
 import 'share_screen.dart';
 import 'support_screen.dart';
 import 'theme.dart';
@@ -97,6 +98,7 @@ class HomeTab extends ConsumerWidget {
               const SizedBox(height: 10),
               BigButton(label: 'Cagnottes', icon: Icons.groups_outlined, dark: false, onTap: () => a?.goTab(3)),
               const JeuxHomeButton(), // n'apparaît que s'il y a des jeux (roue, coffre, tombola)
+              const PretsHomeButton(), // n'apparaît que s'il y a une offre de prêt pour moi ou un prêt en cours
             ]),
           ),
           // Seule la liste des transactions défile.

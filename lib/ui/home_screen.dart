@@ -5,6 +5,7 @@ import '../core/models.dart';
 import '../core/notifications.dart';
 import '../core/push.dart';
 import '../data/me.dart';
+import '../state/prets_provider.dart';
 import '../state/providers.dart';
 import 'design.dart';
 import 'kyc_screen.dart';
@@ -40,6 +41,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     Push.start(ref.read(repoProvider), onMessage: () {
       ref.invalidate(transfersProvider);
       ref.invalidate(noticesProvider);
+      ref.invalidate(pretsProvider);
     });
   }
 

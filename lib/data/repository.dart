@@ -102,15 +102,6 @@ class Repo {
   Future<void> changePin(String ancien, String nouveau) => _run(() => _dio.post('/pin/change', data: {'ancien': ancien, 'nouveau': nouveau}));
   Future<void> resetPin(String code, String nouveau) => _run(() => _dio.post('/pin/reset', data: {'code': code, 'nouveau': nouveau}));
 
-  Future<void> registerPush(String token) => _run(() => _dio.post('/push/token', data: {'token': token, 'plateforme': 'android'}));
-}
-
-/// État du code PIN du compte (réponse de GET /pin/status).
-class PinStatus {
-  PinStatus({required this.defini, this.secondesBloque = 0});
-  final bool defini;
-  final int secondesBloque;
-  factory PinStatus.fromJson(Map<String, dynamic> j) => PinStatus(defini: j['defini'] == true, secondesBloque: (j['secondesBloque'] as num?)?.toInt() ?? 0);
 
   // --- Petits prêts ---
   Future<PretsData> prets() => _run(() async => PretsData.fromJson((await _dio.get('/prets')).data));
@@ -123,4 +114,12 @@ class PinStatus {
       _run(() async => Pret.fromJson((await _dio.post('/prets/$id/rembourser', data: {
             'operateur': op.api, 'payerPhone': payerPhone, 'idempotencyKey': idempotencyKey, 'pin': pin,
           })).data));
+}
+
+/// État du code PIN du compte (réponse de GET /pin/status).
+class PinStatus {
+  PinStatus({required this.defini, this.secondesBloque = 0});
+  final bool defini;
+  final int secondesBloque;
+  factory PinStatus.fromJson(Map<String, dynamic> j) => PinStatus(defini: j['defini'] == true, secondesBloque: (j['secondesBloque'] as num?)?.toInt() ?? 0);
 }

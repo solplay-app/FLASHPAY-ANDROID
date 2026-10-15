@@ -87,8 +87,11 @@ class Repo {
           })).data));
   Future<void> closeCagnotte(String id) => _run(() => _dio.post('/cagnottes/$id/close'));
 
-  // Compte connecté : { id, numeroTelephone, kycStatut }
+  // Compte connecté : { id, numeroTelephone, kycStatut, cguBetaAccepted, cguBetaAcceptedAt }
   Future<Map<String, dynamic>> me() => _run(() async => Map<String, dynamic>.from((await _dio.get('/me')).data as Map));
+
+  // CGU de la bêta privée : le serveur passe cgu_beta_accepted à true et horodate l'acceptation.
+  Future<void> acceptCgu() => _run(() => _dio.post('/cgu/accept'));
 
   // Messages de FlashPay (maintenance, incident, bonus…) : { nonLus: int, rows: [...] }
   Future<Map<String, dynamic>> notices() => _run(() async => Map<String, dynamic>.from((await _dio.get('/notices')).data as Map));
@@ -106,9 +109,10 @@ class Repo {
   // --- Petits prêts ---
   Future<PretsData> prets() => _run(() async => PretsData.fromJson((await _dio.get('/prets')).data));
   Future<Pret> pret(String id) => _run(() async => Pret.fromJson((await _dio.get('/prets/$id')).data));
-  Future<Pret> accepterPret({required String offreId, required int montant, required Op op, required String idempotencyKey, required String pin}) =>
+  Future<Pret> accepterPret({required String offreId, required int montant, required Op op, required String idempotencyKey, required String pin, String? telephoneReception}) =>
       _run(() async => Pret.fromJson((await _dio.post('/prets/accepter', data: {
             'offreId': offreId, 'montant': montant, 'operateur': op.api, 'idempotencyKey': idempotencyKey, 'pin': pin,
+            if (telephoneReception != null && telephoneReception.isNotEmpty) 'telephoneReception': telephoneReception,
           })).data));
   Future<Pret> rembourserPret({required String id, required Op op, required String payerPhone, required String idempotencyKey, required String pin}) =>
       _run(() async => Pret.fromJson((await _dio.post('/prets/$id/rembourser', data: {

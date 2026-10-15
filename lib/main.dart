@@ -6,8 +6,7 @@ import 'core/notifications.dart';
 import 'state/providers.dart';
 import 'ui/app_lock.dart';
 import 'ui/auth_screen.dart';
-import 'ui/home_screen.dart';
-import 'ui/pin_screens.dart';
+import 'ui/cgu_screen.dart';
 import 'ui/theme.dart';
 
 Future<void> main() async {
@@ -39,7 +38,9 @@ class FlashPayApp extends ConsumerWidget {
       home: auth.when(
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (_, __) => const AuthScreen(),
-        data: (s) => s == null ? const AuthScreen() : const PinGate(child: AppLock(child: HomeScreen())),
+        // Session ouverte : CguGate interroge /me et bloque sur les CGU de la bêta tant
+        // qu'elles ne sont pas acceptées ; sinon PinGate → AppLock → écran d'accueil.
+        data: (s) => s == null ? const AuthScreen() : const CguGate(),
       ),
     );
   }

@@ -120,6 +120,7 @@ class _OffreCard extends ConsumerStatefulWidget {
 class _OffreCardState extends ConsumerState<_OffreCard> {
   // Une clé par ouverture : une requête rejouée ne crée jamais deux prêts.
   final _key = const Uuid().v4();
+  final _recep = TextEditingController(); // numéro qui REÇOIT le prêt (par défaut : celui du compte, modifiable)
   Choix? _choix;
   Op? _op;
   bool _busy = false;
@@ -130,20 +131,36 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
     final o = widget.offre;
     if (o.choix.isNotEmpty) _choix = o.choix.last;
     ref.read(meProvider.future).then((m) {
-      if (mounted && _op == null) setState(() => _op = detectOp(m.local) ?? Op.wave);
+      if (!mounted) return;
+      if (_recep.text.isEmpty) _recep.text = m.local;
+      if (_op == null) setState(() => _op = detectOp(m.local) ?? Op.wave);
     }).catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _recep.dispose();
+    super.dispose();
+  }
+
+  /// Numéro de réception : 10 chiffres ivoiriens (01/05/07), au format +225….
+  String? get _recepPhone {
+    var d = _recep.text.replaceAll(RegExp(r'\D'), '');
+    if (d.startsWith('225') && d.length == 13) d = d.substring(3);
+    return RegExp(r'^(01|05|07)\d{8}$').hasMatch(d) ? '+225$d' : null;
   }
 
   Future<void> _accepter() async {
     final c = _choix, op = _op;
-    if (c == null || op == null) return;
+    final recep = _recepPhone;
+    if (c == null || op == null || recep == null) return;
     final pin = await askPin(context, reason: 'Confirmez le prêt de ${fcfa(c.montant)}');
     if (pin == null || !mounted) return;
     setState(() => _busy = true);
     try {
-      await ref.read(repoProvider).accepterPret(offreId: widget.offre.id, montant: c.montant, op: op, idempotencyKey: _key, pin: pin.pin);
+      await ref.read(repoProvider).accepterPret(offreId: widget.offre.id, montant: c.montant, op: op, idempotencyKey: _key, pin: pin.pin, telephoneReception: recep);
       ref.invalidate(pretsProvider);
-      if (mounted) toast(context, 'Prêt accepté. Le versement arrive sur votre compte.');
+      if (mounted) toast(context, 'Prêt accepté. Le versement arrive sur le numéro choisi.');
     } catch (e) {
       if (pin.viaBiometric && e is ApiError && e.code == 'PIN_INVALIDE') await PinService.clearBiometric();
       if (mounted) toast(context, _messageErreur(e));
@@ -171,10 +188,17 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
         ]),
         if (c != null) ...[
           const SizedBox(height: 14),
-          _ligne('Vous recevez', fcfa(c.montant)),
+          _ligne('Vous recevez', fcfa(c.recuReel)),
           _ligne('Frais', fcfa(c.frais)),
           const Divider(height: 24),
           _ligne('À rembourser dans ${o.dureeJours} jours', fcfa(c.totalDu), bold: true),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Coût réel du prêt : ${fcfa(c.cout ?? c.totalDu - c.recuReel)} (vous recevez ${fcfa(c.recuReel)} et rendez ${fcfa(c.totalDu)}).',
+              style: const TextStyle(color: fpMute, fontSize: 12),
+            ),
+          ),
         ],
         const SizedBox(height: 14),
         const Text('Recevoir sur le numéro de votre compte :'),
@@ -187,13 +211,25 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
             padding: EdgeInsets.only(top: 8),
             child: Text('Ce réseau ne correspond pas au numéro de votre compte : vérifiez avant de continuer.', style: TextStyle(color: Colors.orange)),
           ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _recep,
+          enabled: !_busy,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(labelText: 'Numéro de réception (par défaut : celui de votre compte)'),
+        ),
         const SizedBox(height: 18),
         FilledButton(
-          onPressed: _busy || c == null || _op == null ? null : _accepter,
+          onPressed: _busy || c == null || _op == null || _recepPhone == null ? null : _accepter,
           child: _busy ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Accepter le prêt'),
         ),
         const SizedBox(height: 8),
-        const Text('Empruntez seulement ce que vous pouvez rembourser à la date prévue.', style: TextStyle(color: fpMute, fontSize: 12)),
+        Text(
+          o.palierSuivant != null && o.palierSuivant! > (o.choix.isNotEmpty ? o.choix.last.montant : 0)
+              ? 'Après ce remboursement, vous pourrez emprunter jusqu’à ${fcfa(o.palierSuivant!)}.'
+              : 'Empruntez seulement ce que vous pouvez rembourser à la date prévue.',
+          style: const TextStyle(color: fpMute, fontSize: 12),
+        ),
       ]),
     );
   }

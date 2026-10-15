@@ -2,22 +2,28 @@
 int _i(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
 
 class Choix {
-  Choix({required this.montant, required this.frais, required this.totalDu});
+  Choix({required this.montant, required this.frais, required this.totalDu, this.recu, this.cout});
   final int montant, frais, totalDu;
-  factory Choix.fromJson(Map<String, dynamic> j) => Choix(montant: _i(j['montant']), frais: _i(j['frais']), totalDu: _i(j['totalDu']));
+  final int? recu; // ce que le client reçoit RÉELLEMENT sur son numéro (frais Jèko déduits le cas échéant)
+  final int? cout; // coût réel du prêt = totalDu − recu (affiché avant confirmation)
+  int get recuReel => recu ?? montant;
+  factory Choix.fromJson(Map<String, dynamic> j) =>
+      Choix(montant: _i(j['montant']), frais: _i(j['frais']), totalDu: _i(j['totalDu']), recu: j['recu'] == null ? null : _i(j['recu']), cout: j['cout'] == null ? null : _i(j['cout']));
 }
 
 class Offre {
-  Offre({required this.id, required this.montantMax, required this.dureeJours, required this.expireLe, required this.choix});
+  Offre({required this.id, required this.montantMax, required this.dureeJours, required this.expireLe, required this.choix, this.palierSuivant});
   final String id;
   final int montantMax, dureeJours;
   final DateTime? expireLe;
   final List<Choix> choix;
+  final int? palierSuivant; // plafond de progression : dernier montant remboursé + palier (l'admin garde la main au-delà)
   factory Offre.fromJson(Map<String, dynamic> j) => Offre(
         id: '${j['id']}',
         montantMax: _i(j['montantMax']),
         dureeJours: _i(j['dureeJours']),
         expireLe: DateTime.tryParse('${j['expireLe']}')?.toLocal(),
+        palierSuivant: j['palierSuivant'] == null ? null : _i(j['palierSuivant']),
         choix: ((j['choix'] as List?) ?? const []).map((e) => Choix.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
       );
 }
@@ -40,6 +46,7 @@ class Pret {
     required this.dureeJours,
     required this.operateur,
     required this.telephone,
+    this.telephoneReception,
     required this.enRetard,
     required this.peutRembourser,
     this.echeanceLe,
@@ -47,6 +54,7 @@ class Pret {
     this.remboursement,
   });
   final String id, statut, operateur, telephone;
+  final String? telephoneReception; // numéro qui REÇOIT le versement (peut différer du numéro du compte)
   final int montant, frais, totalDu, dureeJours;
   final DateTime? echeanceLe;
   final int? joursRestants;
@@ -64,6 +72,7 @@ class Pret {
         dureeJours: _i(j['dureeJours']),
         operateur: '${j['operateur']}',
         telephone: '${j['telephone']}',
+        telephoneReception: j['telephoneReception']?.toString(),
         echeanceLe: j['echeanceLe'] == null ? null : DateTime.tryParse('${j['echeanceLe']}')?.toLocal(),
         joursRestants: j['joursRestants'] == null ? null : _i(j['joursRestants']),
         enRetard: j['enRetard'] == true,

@@ -1,13 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/providers.dart';
 
-/// Le compte connecté (numéro, statut KYC).
+/// Le compte connecté (numéro, statut KYC, acceptation des CGU de la bêta).
 class Me {
-  Me({required this.id, required this.phone, required this.kyc});
+  Me({required this.id, required this.phone, required this.kyc, this.cguBetaAccepted = false, this.cguBetaAcceptedAt});
   final String id, phone, kyc;
 
-  factory Me.fromJson(Map<String, dynamic> j) =>
-      Me(id: '${j['id']}', phone: '${j['numeroTelephone'] ?? ''}', kyc: '${j['kycStatut'] ?? 'AUCUN'}');
+  /// false (ou champ absent, compte antérieur) = l'écran des CGU bloque l'accès à l'accueil.
+  final bool cguBetaAccepted;
+  final DateTime? cguBetaAcceptedAt;
+
+  factory Me.fromJson(Map<String, dynamic> j) => Me(
+        id: '${j['id']}',
+        phone: '${j['numeroTelephone'] ?? ''}',
+        kyc: '${j['kycStatut'] ?? 'AUCUN'}',
+        cguBetaAccepted: j['cguBetaAccepted'] == true,
+        cguBetaAcceptedAt: DateTime.tryParse('${j['cguBetaAcceptedAt'] ?? ''}')?.toLocal(),
+      );
 
   /// Numéro sur 10 chiffres (« +2250700000000 » → « 0700000000 »).
   String get local {

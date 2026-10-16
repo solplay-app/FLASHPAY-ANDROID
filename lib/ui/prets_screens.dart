@@ -188,10 +188,7 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
         ]),
         if (c != null) ...[
           const SizedBox(height: 14),
-          _ligne('Vous recevez', fcfa(c.recuReel)),
-          _ligne('Frais', fcfa(c.frais)),
-          const Divider(height: 24),
-          _ligne('À rembourser dans ${o.dureeJours} jours', fcfa(c.totalDu), bold: true),
+          RecapPret(demande: c.montant, recu: c.recuReel, frais: c.frais, total: c.totalDu, dureeJours: o.dureeJours),
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
@@ -232,6 +229,37 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
         ),
       ]),
     );
+  }
+}
+
+/// « 1,5 % », « 5 % », « 6,6 % » : pourcentage de [part] sur [base], une décimale au plus (virgule française).
+String _pct(int part, int base) {
+  if (base <= 0) return '0 %';
+  final v = (part * 1000 / base).round() / 10;
+  final t = v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(1).replaceAll('.', ',');
+  return '$t %';
+}
+
+/// Tableau récapitulatif d'un prêt : demande, frais de dossier, montant reçu, capital à rendre, intérêt, total.
+/// Tous les montants viennent du serveur ; seuls les pourcentages sont calculés ici.
+class RecapPret extends StatelessWidget {
+  const RecapPret({super.key, required this.demande, required this.recu, required this.frais, required this.total, this.dureeJours});
+  final int demande, recu, frais, total;
+  final int? dureeJours;
+
+  @override
+  Widget build(BuildContext context) {
+    final fraisDossier = demande - recu;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _ligne('Demande de prêt', fcfa(demande)),
+      if (fraisDossier > 0) _ligne('Frais de dossier (${_pct(fraisDossier, demande)})', '− ${fcfa(fraisDossier)}'),
+      _ligne('Montant reçu', fcfa(recu), bold: true),
+      const Divider(height: 24),
+      _ligne('Remboursement du capital', fcfa(demande)),
+      _ligne('Intérêt (${_pct(frais, demande)})', '+ ${fcfa(frais)}'),
+      const Divider(height: 24),
+      _ligne(dureeJours == null ? 'Total à rembourser' : 'Total à rembourser dans $dureeJours jours', fcfa(total), bold: true),
+    ]);
   }
 }
 
@@ -331,9 +359,7 @@ class _PretCardState extends ConsumerState<_PretCard> {
           StatusChip(label: _libelle(p), color: retard ? Colors.red : const Color(0xFF1E9E5A)),
         ]),
         const SizedBox(height: 12),
-        _ligne('Montant reçu', fcfa(p.montant)),
-        _ligne('Frais', fcfa(p.frais)),
-        _ligne('Total à rembourser', fcfa(p.totalDu), bold: true),
+        RecapPret(demande: p.montant, recu: p.recuReel, frais: p.frais, total: p.totalDu, dureeJours: p.dureeJours),
         if (p.echeanceLe != null) _ligne('Date limite', _jour(p.echeanceLe)),
         if (p.versementEnCours)
           const Padding(

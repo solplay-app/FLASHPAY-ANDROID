@@ -43,6 +43,7 @@ class Pret {
     required this.montant,
     required this.frais,
     required this.totalDu,
+    this.recu,
     required this.dureeJours,
     required this.operateur,
     required this.telephone,
@@ -56,6 +57,8 @@ class Pret {
   final String id, statut, operateur, telephone;
   final String? telephoneReception; // numéro qui REÇOIT le versement (peut différer du numéro du compte)
   final int montant, frais, totalDu, dureeJours;
+  final int? recu; // ce que le client a réellement reçu (frais de dossier déduits)
+  int get recuReel => recu ?? montant;
   final DateTime? echeanceLe;
   final int? joursRestants;
   final bool enRetard, peutRembourser;
@@ -69,6 +72,7 @@ class Pret {
         montant: _i(j['montant']),
         frais: _i(j['frais']),
         totalDu: _i(j['totalDu']),
+        recu: j['recu'] == null ? null : _i(j['recu']),
         dureeJours: _i(j['dureeJours']),
         operateur: '${j['operateur']}',
         telephone: '${j['telephone']}',

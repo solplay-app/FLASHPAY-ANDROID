@@ -1,6 +1,6 @@
 # FlashPay — application Flutter
 
-Écrans : 1 Connexion OTP · 2 Accueil · 3 Transfert · 4 Ticket de confirmation + suivi · 5 KYC.
+Écrans : 1 Connexion OTP · 2 Accueil · 3 Transfert · 4 Ticket de confirmation + suivi · 5 KYC (nom, prénom, numéro de pièce, photo de la pièce et selfie).
 Architecture : `core/` (Dio, intercepteur, modèles) · `data/` (appels API) · `state/` (Riverpod) · `ui/`.
 
 ## Mise en route
@@ -21,6 +21,9 @@ Les notifications sont locales : elles partent quand l'app détecte un changemen
 
 ## Logos des opérateurs
 Déposez `wave.png`, `orange.png`, `mtn.png`, `moov.png` dans `assets/operators/` (logos officiels fournis par chaque opérateur). Sans fichier, une pastille colorée avec l'initiale s'affiche.
+
+## KYC
+`lib/ui/kyc_screen.dart` : le client saisit son nom, son prénom et le numéro de sa pièce, photographie la pièce puis prend un selfie (`image_picker`). Chaque photo est envoyée directement à Cloudinary (`Repository.uploadKycPhoto(path, selfie: true|false)`), puis `Repository.submitKyc(nom, prenom, numeroPiece, documentPath, selfiePath)` transmet le dossier. Si la pièce est déjà utilisée par un autre compte, le serveur répond `409 PIECE_DEJA_UTILISEE`. Nécessite le backend avec les migrations 009 à 011.
 
 ## Support
 Écran Support (icône casque de l'accueil, lien « Besoin d'aide ? » à la connexion) : appel +225 01 05 14 71 23 et e-mail flashpay@gmail.com. Constantes dans `lib/ui/support_screen.dart`.

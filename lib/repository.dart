@@ -59,15 +59,16 @@ class Repo {
   Future<Limits> limits() => _run(() async => Limits.fromJson((await _dio.get('/transfers/limits')).data));
 
   Future<String> kycStatus() => _run(() async => (await _dio.get('/kyc')).data['kycStatut'] as String);
-  Future<void> submitKyc(String path) => _run(() => _dio.post('/kyc', data: {'documentPath': path}));
+  Future<void> submitKyc({required String nom, required String prenom, required String numeroPiece, required String documentPath, required String selfiePath}) =>
+      _run(() => _dio.post('/kyc', data: {'nom': nom, 'prenom': prenom, 'numeroPiece': numeroPiece, 'documentPath': documentPath, 'selfiePath': selfiePath}));
   /// Envoi de la pièce : signature fournie par le serveur, puis envoi DIRECT à Cloudinary (client sans jeton FlashPay :
-  /// la clé secrète reste sur le serveur). Renvoie l'identifiant du fichier à transmettre à [submitKyc].
-  Future<String> uploadKycPhoto(String filePath) => _run(() async {
-        final sig = (await _dio.get('/kyc/upload-signature')).data as Map;
+  /// la clé secrète reste sur le serveur). Renvoie l'identifiant du fichier à transmettre à [submitKyc] (pièce ou selfie).
+  Future<String> uploadKycPhoto(String filePath, {bool selfie = false}) => _run(() async {
+        final sig = (await _dio.get('/kyc/upload-signature', queryParameters: {'type': selfie ? 'selfie' : 'piece'})).data as Map;
         final up = Dio(BaseOptions(connectTimeout: const Duration(seconds: 20), sendTimeout: const Duration(seconds: 60), receiveTimeout: const Duration(seconds: 30)));
         final r = await up.post(sig['uploadUrl'] as String,
             data: FormData.fromMap({
-              'file': await MultipartFile.fromFile(filePath, filename: 'cni.jpg'),
+              'file': await MultipartFile.fromFile(filePath, filename: selfie ? 'selfie.jpg' : 'cni.jpg'),
               'api_key': sig['apiKey'],
               'timestamp': sig['timestamp'],
               'signature': sig['signature'],

@@ -124,6 +124,7 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
   Choix? _choix;
   Op? _op;
   bool _busy = false;
+  int _etape = 0; // 0 : montant et détail · 1 : remboursement · 2 : réception et validation
 
   @override
   void initState() {
@@ -175,80 +176,130 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
     final c = _choix;
     final me = ref.watch(meProvider).maybeWhen(data: (m) => m, orElse: () => null);
     final mismatch = me != null && _op != null && _op != Op.wave && detectOp(me.local) != _op;
+    final suivantOk = c != null;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _OffreHeader(offre: o, choix: c, busy: _busy, onPick: (x) => setState(() => _choix = x)),
-      if (c != null) ...[
-        const SizedBox(height: 16),
-        RecapPret(demande: c.montant, recu: c.recuReel, frais: c.frais, total: c.totalDu, dureeJours: o.dureeJours, cartes: true),
+      _Etapes(etape: _etape),
+      const SizedBox(height: 14),
+      if (_etape == 0) ...[
+        _OffreHeader(offre: o, choix: c, busy: _busy, onPick: (x) => setState(() => _choix = x)),
+        if (c != null) ...[
+          const SizedBox(height: 16),
+          RecapPret(demande: c.montant, recu: c.recuReel, frais: c.frais, total: c.totalDu, dureeJours: o.dureeJours, cartes: true, partie: RecapPartie.detail),
+        ],
+      ],
+      if (_etape == 1 && c != null) ...[
+        RecapPret(demande: c.montant, recu: c.recuReel, frais: c.frais, total: c.totalDu, dureeJours: o.dureeJours, cartes: true, partie: RecapPartie.remboursement),
         const SizedBox(height: 16),
         _CoutReel(cout: c.cout ?? c.totalDu - c.recuReel, recu: c.recuReel, total: c.totalDu),
       ],
-      const SizedBox(height: 16),
-      _Section(
-        titre: 'Recevoir les fonds',
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Recevoir sur le numéro de votre compte :', style: TextStyle(color: fpMute, fontSize: 16)),
-          const SizedBox(height: 14),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.5,
-            children: [
-              for (final op in Op.values) _OpTile(op: op, selected: _op == op, onTap: _busy ? null : () => setState(() => _op = op)),
-            ],
-          ),
-          if (mismatch)
-            const Padding(
-              padding: EdgeInsets.only(top: 10),
-              child: Text('Ce réseau ne correspond pas au numéro de votre compte : vérifiez avant de continuer.', style: TextStyle(color: Colors.orange)),
+      if (_etape == 2)
+        _Section(
+          titre: 'Recevoir les fonds',
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Recevoir sur le numéro de votre compte :', style: TextStyle(color: fpMute, fontSize: 16)),
+            const SizedBox(height: 14),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 2.5,
+              children: [
+                for (final op in Op.values) _OpTile(op: op, selected: _op == op, onTap: _busy ? null : () => setState(() => _op = op)),
+              ],
             ),
-          const SizedBox(height: 18),
-          const Text('Numéro de réception (par défaut : celui de votre compte)', style: TextStyle(color: fpMute, fontSize: 15)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _recep,
-            enabled: !_busy,
-            keyboardType: TextInputType.phone,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 3, color: fpInk),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFFFAF8FF),
-              suffixIcon: const Icon(Icons.edit_outlined, color: fpMute),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFE2DCEF))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFE2DCEF))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: brand, width: 2)),
+            if (mismatch)
+              const Padding(
+                padding: EdgeInsets.only(top: 10),
+                child: Text('Ce réseau ne correspond pas au numéro de votre compte : vérifiez avant de continuer.', style: TextStyle(color: Colors.orange)),
+              ),
+            const SizedBox(height: 18),
+            const Text('Numéro de réception (par défaut : celui de votre compte)', style: TextStyle(color: fpMute, fontSize: 15)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _recep,
+              enabled: !_busy,
+              keyboardType: TextInputType.phone,
+              onChanged: (_) => setState(() {}),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 3, color: fpInk),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFFFAF8FF),
+                suffixIcon: const Icon(Icons.edit_outlined, color: fpMute),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFE2DCEF))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFE2DCEF))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: brand, width: 2)),
+              ),
             ),
-          ),
-        ]),
-      ),
-      const SizedBox(height: 20),
-      FilledButton.icon(
-        onPressed: _busy || c == null || _op == null || _recepPhone == null ? null : _accepter,
-        icon: _busy
-            ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.shield_outlined),
-        label: const Text('Accepter le prêt', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        style: FilledButton.styleFrom(
-          backgroundColor: fpDeep,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(60),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ]),
         ),
-      ),
+      const SizedBox(height: 20),
+      if (_etape < 2)
+        FilledButton(
+          onPressed: suivantOk ? () => setState(() => _etape++) : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: fpDeep,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(60),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          child: const Text('Continuer', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        )
+      else
+        FilledButton.icon(
+          onPressed: _busy || c == null || _op == null || _recepPhone == null ? null : _accepter,
+          icon: _busy
+              ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.shield_outlined),
+          label: const Text('Accepter le prêt', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          style: FilledButton.styleFrom(
+            backgroundColor: fpDeep,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(60),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+        ),
+      if (_etape > 0)
+        TextButton(
+          onPressed: _busy ? null : () => setState(() => _etape--),
+          child: const Text('Retour', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        ),
       const SizedBox(height: 12),
-      Text(
-        o.palierSuivant != null && o.palierSuivant! > (o.choix.isNotEmpty ? o.choix.last.montant : 0)
-            ? 'Après ce remboursement, vous pourrez emprunter jusqu’à ${fcfa(o.palierSuivant!)}.'
-            : 'Empruntez seulement ce que vous pouvez rembourser à la date prévue.',
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: fpMute, fontSize: 14),
-      ),
+      if (_etape == 2)
+        Text(
+          o.palierSuivant != null && o.palierSuivant! > (o.choix.isNotEmpty ? o.choix.last.montant : 0)
+              ? 'Après ce remboursement, vous pourrez emprunter jusqu’à ${fcfa(o.palierSuivant!)}.'
+              : 'Empruntez seulement ce que vous pouvez rembourser à la date prévue.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: fpMute, fontSize: 14),
+        ),
       const SizedBox(height: 8),
+    ]);
+  }
+}
+
+/// Indicateur « Étape x sur 3 » avec trois barres.
+class _Etapes extends StatelessWidget {
+  const _Etapes({required this.etape});
+  final int etape;
+  @override
+  Widget build(BuildContext context) {
+    const titres = ['Montant', 'Remboursement', 'Réception'];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        for (var i = 0; i < 3; i++)
+          Expanded(
+            child: Container(
+              height: 6,
+              margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
+              decoration: BoxDecoration(color: i <= etape ? brand : const Color(0xFFE2DCEF), borderRadius: BorderRadius.circular(3)),
+            ),
+          ),
+      ]),
+      const SizedBox(height: 8),
+      Text('Étape ${etape + 1} sur 3 · ${titres[etape]}', style: const TextStyle(color: fpMute, fontSize: 14, fontWeight: FontWeight.w700)),
     ]);
   }
 }
@@ -402,14 +453,17 @@ String _pct(int part, int base) {
 const _ambre = Color(0xFFB7791F);
 const _sepRecap = Divider(height: 1, color: Color(0xFFE7E3EC));
 
+enum RecapPartie { detail, remboursement }
+
 /// Tableau récapitulatif d'un prêt : demande, frais de dossier, montant reçu, capital à rendre, intérêt, total.
 /// Tous les montants viennent du serveur ; seuls les pourcentages sont calculés ici.
 /// [cartes] : deux cartes séparées (écran d'offre) ; sinon un bloc simple à placer dans une carte existante.
 class RecapPret extends StatelessWidget {
-  const RecapPret({super.key, required this.demande, required this.recu, required this.frais, required this.total, this.dureeJours, this.cartes = false});
+  const RecapPret({super.key, required this.demande, required this.recu, required this.frais, required this.total, this.dureeJours, this.cartes = false, this.partie});
   final int demande, recu, frais, total;
   final int? dureeJours;
   final bool cartes;
+  final RecapPartie? partie; // null : les deux cartes
 
   @override
   Widget build(BuildContext context) {
@@ -438,6 +492,8 @@ class RecapPret extends StatelessWidget {
       ),
     ]);
     if (cartes) {
+      if (partie == RecapPartie.detail) return _Section(titre: 'Détail du prêt', child: detail);
+      if (partie == RecapPartie.remboursement) return _Section(titre: 'Remboursement', child: remboursement);
       return Column(children: [
         _Section(titre: 'Détail du prêt', child: detail),
         const SizedBox(height: 16),

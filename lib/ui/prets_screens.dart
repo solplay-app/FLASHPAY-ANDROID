@@ -175,61 +175,220 @@ class _OffreCardState extends ConsumerState<_OffreCard> {
     final c = _choix;
     final me = ref.watch(meProvider).maybeWhen(data: (m) => m, orElse: () => null);
     final mismatch = me != null && _op != null && _op != Op.wave && detectOp(me.local) != _op;
-    return SoftCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Une offre pour vous', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-        const SizedBox(height: 4),
-        Text('Jusqu’à ${fcfa(o.montantMax)} · remboursement en ${o.dureeJours} jours'
-            '${o.expireLe != null ? ' · valable jusqu’au ${_jour(o.expireLe)}' : ''}'),
-        const SizedBox(height: 14),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final x in o.choix)
-            ChoiceChip(label: Text(fcfa(x.montant)), selected: c?.montant == x.montant, onSelected: _busy ? null : (_) => setState(() => _choix = x)),
-        ]),
-        if (c != null) ...[
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _OffreHeader(offre: o, choix: c, busy: _busy, onPick: (x) => setState(() => _choix = x)),
+      if (c != null) ...[
+        const SizedBox(height: 16),
+        RecapPret(demande: c.montant, recu: c.recuReel, frais: c.frais, total: c.totalDu, dureeJours: o.dureeJours, cartes: true),
+        const SizedBox(height: 16),
+        _CoutReel(cout: c.cout ?? c.totalDu - c.recuReel, recu: c.recuReel, total: c.totalDu),
+      ],
+      const SizedBox(height: 16),
+      _Section(
+        titre: 'Recevoir les fonds',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Recevoir sur le numéro de votre compte :', style: TextStyle(color: fpMute, fontSize: 16)),
           const SizedBox(height: 14),
-          RecapPret(demande: c.montant, recu: c.recuReel, frais: c.frais, total: c.totalDu, dureeJours: o.dureeJours),
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              'Coût réel du prêt : ${fcfa(c.cout ?? c.totalDu - c.recuReel)} (vous recevez ${fcfa(c.recuReel)} et rendez ${fcfa(c.totalDu)}).',
-              style: const TextStyle(color: fpMute, fontSize: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 2.5,
+            children: [
+              for (final op in Op.values) _OpTile(op: op, selected: _op == op, onTap: _busy ? null : () => setState(() => _op = op)),
+            ],
+          ),
+          if (mismatch)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text('Ce réseau ne correspond pas au numéro de votre compte : vérifiez avant de continuer.', style: TextStyle(color: Colors.orange)),
+            ),
+          const SizedBox(height: 18),
+          const Text('Numéro de réception (par défaut : celui de votre compte)', style: TextStyle(color: fpMute, fontSize: 15)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _recep,
+            enabled: !_busy,
+            keyboardType: TextInputType.phone,
+            onChanged: (_) => setState(() {}),
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 3, color: fpInk),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFFAF8FF),
+              suffixIcon: const Icon(Icons.edit_outlined, color: fpMute),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFE2DCEF))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Color(0xFFE2DCEF))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: brand, width: 2)),
             ),
           ),
-        ],
-        const SizedBox(height: 14),
-        const Text('Recevoir sur le numéro de votre compte :'),
-        const SizedBox(height: 6),
-        Wrap(spacing: 8, children: [
-          for (final op in Op.values) ChoiceChip(label: Text(op.label), selected: _op == op, onSelected: _busy ? null : (_) => setState(() => _op = op)),
         ]),
-        if (mismatch)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text('Ce réseau ne correspond pas au numéro de votre compte : vérifiez avant de continuer.', style: TextStyle(color: Colors.orange)),
-          ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _recep,
-          enabled: !_busy,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: 'Numéro de réception (par défaut : celui de votre compte)'),
+      ),
+      const SizedBox(height: 20),
+      FilledButton.icon(
+        onPressed: _busy || c == null || _op == null || _recepPhone == null ? null : _accepter,
+        icon: _busy
+            ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Icon(Icons.shield_outlined),
+        label: const Text('Accepter le prêt', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        style: FilledButton.styleFrom(
+          backgroundColor: fpDeep,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(60),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
-        const SizedBox(height: 18),
-        FilledButton(
-          onPressed: _busy || c == null || _op == null || _recepPhone == null ? null : _accepter,
-          child: _busy ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Accepter le prêt'),
-        ),
+      ),
+      const SizedBox(height: 12),
+      Text(
+        o.palierSuivant != null && o.palierSuivant! > (o.choix.isNotEmpty ? o.choix.last.montant : 0)
+            ? 'Après ce remboursement, vous pourrez emprunter jusqu’à ${fcfa(o.palierSuivant!)}.'
+            : 'Empruntez seulement ce que vous pouvez rembourser à la date prévue.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: fpMute, fontSize: 14),
+      ),
+      const SizedBox(height: 8),
+    ]);
+  }
+}
+
+/// En-tête violet : titre, conditions de l'offre et choix du montant.
+class _OffreHeader extends StatelessWidget {
+  const _OffreHeader({required this.offre, required this.choix, required this.busy, required this.onPick});
+  final Offre offre;
+  final Choix? choix;
+  final bool busy;
+  final ValueChanged<Choix> onPick;
+  @override
+  Widget build(BuildContext context) {
+    final o = offre;
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFF4F2A8C), Color(0xFF6E3FA3)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [BoxShadow(color: Color(0x403B2A6B), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Une offre pour vous', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         Text(
-          o.palierSuivant != null && o.palierSuivant! > (o.choix.isNotEmpty ? o.choix.last.montant : 0)
-              ? 'Après ce remboursement, vous pourrez emprunter jusqu’à ${fcfa(o.palierSuivant!)}.'
-              : 'Empruntez seulement ce que vous pouvez rembourser à la date prévue.',
-          style: const TextStyle(color: fpMute, fontSize: 12),
+          'Jusqu’à ${fcfa(o.montantMax)} · remboursement en ${o.dureeJours} jours'
+          '${o.expireLe != null ? ' · valable jusqu’au ${_jour(o.expireLe)}' : ''}',
+          style: const TextStyle(color: Color(0xDDFFFFFF), fontSize: 16, height: 1.4),
+        ),
+        const SizedBox(height: 18),
+        Wrap(spacing: 10, runSpacing: 10, children: [
+          for (final x in o.choix) _Pastille(label: fcfa(x.montant), selected: choix?.montant == x.montant, onTap: busy ? null : () => onPick(x)),
+        ]),
+      ]),
+    );
+  }
+}
+
+class _Pastille extends StatelessWidget {
+  const _Pastille({required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+        color: selected ? Colors.white : Colors.white.withOpacity(.16),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (selected) const Padding(padding: EdgeInsets.only(right: 10), child: Icon(Icons.check, color: fpDeep, size: 24)),
+              Text(label, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: selected ? fpDeep : Colors.white)),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// Carte blanche avec un petit titre en capitales.
+class _Section extends StatelessWidget {
+  const _Section({required this.titre, required this.child});
+  final String titre;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => SoftCard(
+        color: Colors.white,
+        radius: 28,
+        padding: const EdgeInsets.all(20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(titre.toUpperCase(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.8, color: Color(0xFF9A93AE))),
+          const SizedBox(height: 14),
+          child,
+        ]),
+      );
+}
+
+/// Encart d'information : coût réel du prêt.
+class _CoutReel extends StatelessWidget {
+  const _CoutReel({required this.cout, required this.recu, required this.total});
+  final int cout, recu, total;
+  @override
+  Widget build(BuildContext context) {
+    const gras = TextStyle(fontWeight: FontWeight.w800);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: const Color(0xFFFFF6E8), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFF3DFB8))),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Padding(padding: EdgeInsets.only(top: 2), child: Icon(Icons.info_outline, color: _ambre, size: 22)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text.rich(
+            TextSpan(style: const TextStyle(color: Color(0xFF7A4B0B), fontSize: 16, height: 1.4), children: [
+              const TextSpan(text: 'Coût réel du prêt : '),
+              TextSpan(text: fcfa(cout), style: gras),
+              const TextSpan(text: ' (vous recevez '),
+              TextSpan(text: fcfa(recu), style: gras),
+              const TextSpan(text: ' et rendez '),
+              TextSpan(text: fcfa(total), style: gras),
+              const TextSpan(text: ').'),
+            ]),
+          ),
         ),
       ]),
     );
   }
+}
+
+/// Un réseau mobile money : son logo (assets/operators), son nom, coche si choisi.
+class _OpTile extends StatelessWidget {
+  const _OpTile({required this.op, required this.selected, required this.onTap});
+  final Op op;
+  final bool selected;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFF1EBFB) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: selected ? brand : const Color(0xFFE2DCEF), width: selected ? 1.8 : 1.2),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(children: [
+                OpCircle(op, size: 44),
+                const SizedBox(width: 12),
+                Expanded(child: Text(op.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: fpInk))),
+                if (selected) const Icon(Icons.check, color: brand, size: 24),
+              ]),
+            ),
+          ),
+        ),
+      );
 }
 
 /// « 1,5 % », « 5 % », « 6,6 % » : pourcentage de [part] sur [base], une décimale au plus (virgule française).
@@ -240,27 +399,86 @@ String _pct(int part, int base) {
   return '$t %';
 }
 
+const _ambre = Color(0xFFB7791F);
+const _sepRecap = Divider(height: 1, color: Color(0xFFE7E3EC));
+
 /// Tableau récapitulatif d'un prêt : demande, frais de dossier, montant reçu, capital à rendre, intérêt, total.
 /// Tous les montants viennent du serveur ; seuls les pourcentages sont calculés ici.
+/// [cartes] : deux cartes séparées (écran d'offre) ; sinon un bloc simple à placer dans une carte existante.
 class RecapPret extends StatelessWidget {
-  const RecapPret({super.key, required this.demande, required this.recu, required this.frais, required this.total, this.dureeJours});
+  const RecapPret({super.key, required this.demande, required this.recu, required this.frais, required this.total, this.dureeJours, this.cartes = false});
   final int demande, recu, frais, total;
   final int? dureeJours;
+  final bool cartes;
 
   @override
   Widget build(BuildContext context) {
     final fraisDossier = demande - recu;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _ligne('Demande de prêt', fcfa(demande)),
-      if (fraisDossier > 0) _ligne('Frais de dossier (${_pct(fraisDossier, demande)})', '− ${fcfa(fraisDossier)}'),
-      _ligne('Montant reçu', fcfa(recu), bold: true),
-      const Divider(height: 24),
-      _ligne('Remboursement du capital', fcfa(demande)),
-      _ligne('Intérêt (${_pct(frais, demande)})', '+ ${fcfa(frais)}'),
-      const Divider(height: 24),
-      _ligne(dureeJours == null ? 'Total à rembourser' : 'Total à rembourser dans $dureeJours jours', fcfa(total), bold: true),
+    final detail = Column(children: [
+      _LigneRecap('Demande de prêt', fcfa(demande)),
+      if (fraisDossier > 0) ...[
+        _sepRecap,
+        _LigneRecap('Frais de dossier (${_pct(fraisDossier, demande)})', '− ${fcfa(fraisDossier)}', couleur: _ambre),
+      ],
+      const SizedBox(height: 12),
+      _Encart(label: 'Montant reçu', valeur: fcfa(recu), fond: const Color(0xFFEAF7F0), bord: const Color(0xFFCDEBDB), texte: const Color(0xFF0F7A47)),
     ]);
+    final remboursement = Column(children: [
+      _LigneRecap('Remboursement du capital', fcfa(demande)),
+      _sepRecap,
+      _LigneRecap('Intérêt (${_pct(frais, demande)})', '+ ${fcfa(frais)}', couleur: _ambre),
+      const SizedBox(height: 12),
+      _Encart(
+        label: dureeJours == null ? 'Total à rembourser' : 'Total à rembourser dans $dureeJours jours',
+        valeur: fcfa(total),
+        fond: const Color(0xFFF1EBFB),
+        bord: const Color(0xFFDCCFF5),
+        texte: fpDeep,
+        grand: true,
+      ),
+    ]);
+    if (cartes) {
+      return Column(children: [
+        _Section(titre: 'Détail du prêt', child: detail),
+        const SizedBox(height: 16),
+        _Section(titre: 'Remboursement', child: remboursement),
+      ]);
+    }
+    return Column(children: [detail, const Divider(height: 28), remboursement]);
   }
+}
+
+class _LigneRecap extends StatelessWidget {
+  const _LigneRecap(this.label, this.valeur, {this.couleur});
+  final String label, valeur;
+  final Color? couleur;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Flexible(child: Text(label, style: const TextStyle(fontSize: 17, color: fpMute))),
+          const SizedBox(width: 12),
+          Text(valeur, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: couleur ?? fpInk)),
+        ]),
+      );
+}
+
+/// Ligne mise en valeur (montant reçu en vert, total en violet).
+class _Encart extends StatelessWidget {
+  const _Encart({required this.label, required this.valeur, required this.fond, required this.bord, required this.texte, this.grand = false});
+  final String label, valeur;
+  final Color fond, bord, texte;
+  final bool grand;
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(color: fond, borderRadius: BorderRadius.circular(16), border: Border.all(color: bord)),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Flexible(child: Text(label, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: texte))),
+          const SizedBox(width: 12),
+          Text(valeur, style: TextStyle(fontSize: grand ? 30 : 26, fontWeight: FontWeight.w800, color: texte)),
+        ]),
+      );
 }
 
 Widget _ligne(String a, String b, {bool bold = false}) => Padding(

@@ -26,7 +26,7 @@ Déposez `wave.png`, `orange.png`, `mtn.png`, `moov.png` dans `assets/operators/
 `lib/ui/kyc_screen.dart` : le client saisit son nom, son prénom et le numéro de sa pièce, photographie la pièce puis prend un selfie (`image_picker`). Chaque photo est envoyée directement à Cloudinary (`Repository.uploadKycPhoto(path, selfie: true|false)`), puis `Repository.submitKyc(nom, prenom, numeroPiece, documentPath, selfiePath)` transmet le dossier. Si la pièce est déjà utilisée par un autre compte, le serveur répond `409 PIECE_DEJA_UTILISEE`. Nécessite le backend avec les migrations 009 à 011.
 
 ## Prêts : tableau récapitulatif
-`RecapPret` (`lib/ui/prets_screens.dart`) affiche, avant l'acceptation et dans « Mon prêt » : demande de prêt, frais de dossier (déduits), **montant reçu**, remboursement du capital, intérêt (en %) et **total à rembourser**. Les montants viennent du serveur (`recu` dans la vue d'un prêt) ; seuls les pourcentages sont calculés dans l'application.
+`RecapPret` (`lib/ui/prets_screens.dart`) affiche, avant l'acceptation et dans « Mon prêt » : demande de prêt, frais de dossier (déduits), **montant reçu**, remboursement du capital, intérêt (en %) et **total à rembourser**. Les montants viennent du serveur (`recu` dans la vue d'un prêt) ; seuls les pourcentages sont calculés dans l'application. Sur l'écran d'offre, le tableau est présenté en deux cartes (« Détail du prêt » avec le montant reçu en vert, « Remboursement » avec le total en violet), suivies de l'encart « Coût réel » et de la carte « Recevoir les fonds » (4 réseaux, numéro modifiable).
 
 ## Support
 Écran Support (icône casque de l'accueil, lien « Besoin d'aide ? » à la connexion) : appel +225 01 05 14 71 23 et e-mail flashpay@gmail.com. Constantes dans `lib/ui/support_screen.dart`.
